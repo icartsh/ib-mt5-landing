@@ -8,6 +8,7 @@
   "scripts": {
     "start": "node server/server.mjs",
     "mock-webhook": "node scripts/mock-webhook.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "copy-guard": "node scripts/copy-guard.mjs"
   }
 }

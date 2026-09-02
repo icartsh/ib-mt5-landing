@@ -23,6 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 표현 제약 위반은 배포를 막는다. 잘못된 문구가 라이브로 나가는 것이
+      # 배포가 늦어지는 것보다 비싸다 (IB-2 6절 / IB-6 / IB-8).
+      - name: Check landing copy constraints
+        run: node scripts/copy-guard.mjs
+
       - name: Assemble static site
         run: |
           mkdir -p _site
