@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>IB 전환 추적 대시보드</title>
+  <style>
+    :root{font-family:system-ui,sans-serif;color:#172033;background:#f4f6fa}body{margin:0;padding:24px}.wrap{max-width:1180px;margin:auto}.card{background:#fff;border:1px solid #dde3ed;border-radius:12px;padding:18px;margin:12px 0}h1,h2{margin:0 0 12px}.muted{color:#687387}.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}button,label.file{background:#193c72;color:white;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}button.secondary{background:#e8edf5;color:#172033}input[type=file]{display:none}.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.kpi{background:#eef3fb;border-radius:9px;padding:12px}.kpi strong{font-size:24px;display:block}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:9px;border-bottom:1px solid #e4e8ef;text-align:right;white-space:nowrap}th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}tr.test{opacity:.55}.ok{color:#18794e}.warn{color:#9a6700}@media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body><main class="wrap">
+  <h1>IB 전환 추적 대시보드</h1>
+  <p class="muted">채널·영상별 주간 퍼널. 원본은 개인 식별 정보가 없는 집계행만 사용합니다.</p>
+  <section class="card controls">
+    <label class="file">집계 CSV 불러오기<input id="file" type="file" accept=".csv,text/csv"></label>
+    <button id="empty" class="secondary">빈 대시보드</button>
+    <button id="sample">테스트 리드 반영</button>
+    <button id="shortform" class="secondary">숏폼 4채널 검증</button>
+    <button id="download" class="secondary">CSV 템플릿 저장</button>
+    <label>채널 <select id="sourceFilter"><option value="">전체</option><option value="youtube">YouTube Shorts</option><option value="instagram">Instagram Reels</option><option value="tiktok">TikTok</option><option value="threads">Threads</option></select></label>
+    <label><input id="includeTest" type="checkbox"> 내부 테스트 포함</label>
+    <span id="status" class="muted" aria-live="polite"></span>
+  </section>
+  <section class="card"><h2>합계</h2><div id="kpis" class="kpis"></div></section>
+  <section class="card table-wrap"><h2>채널·영상별</h2><table><thead><tr><th>채널</th><th>영상/소재 ID</th><th>유입</th><th>신청</th><th>상담</th><th>계좌 개설</th><th>첫 입금</th><th>신청률</th><th>상담률</th><th>개설률</th><th>입금률</th></tr></thead><tbody id="rows"></tbody></table></section>
+  <p class="muted">정의: 각 수치는 해당 주에 그 단계에 최초 도달한 고유 anonymous_id/lead_id 수입니다. 비율의 분모는 바로 이전 단계입니다.</p>
+</main><script>
+const columns=['week_start','utm_source','utm_medium','utm_campaign','utm_content','utm_term','is_test','visits','applications','consultations','accounts_opened','first_deposits'];
+const blank=[];
+const sample=[{week_start:'2026-08-31',utm_source:'internal',utm_medium:'test',utm_campaign:'qa',utm_content:'internal_test',utm_term:'dashboard_smoke',is_test:'true',visits:1,applications:1,consultations:1,accounts_opened:1,first_deposits:1}];
+const shortformSample=[
+ {week_start:'2026-08-31',utm_source:'youtube',utm_medium:'shorts',utm_campaign:'shortform_organic',utm_content:'sf_001',utm_term:'',is_test:'false',visits:11,applications:4,consultations:2,accounts_opened:1,first_deposits:0},
+ {week_start:'2026-08-31',utm_source:'instagram',utm_medium:'reels',utm_campaign:'shortform_organic',utm_content:'sf_001',utm_term:'',is_test:'false',visits:12,applications:3,consultations:1,accounts_opened:0,first_deposits:0},
+ {week_start:'2026-08-31',utm_source:'tiktok',utm_medium:'short_video',utm_campaign:'shortform_organic',utm_content:'sf_001',utm_term:'',is_test:'false',visits:13,applications:2,consultations:1,accounts_opened:0,first_deposits:0},
+ {week_start:'2026-08-31',utm_source:'threads',utm_medium:'short_video',utm_campaign:'shortform_organic',utm_content:'sf_001',utm_term:'',is_test:'false',visits:14,applications:1,consultations:0,accounts_opened:0,first_deposits:0}
+];
+let data=blank;
+const n=v=>Number(v)||0, rate=(a,b)=>b?`${(100*a/b).toFixed(1)}%`:'—', esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function visible(){const source=document.querySelector('#sourceFilter').value;const rows=document.querySelector('#includeTest').checked?data:data.filter(r=>String(r.is_test).toLowerCase()!=='true'&&r.utm_source!=='internal');return source?rows.filter(r=>r.utm_source===source):rows}
+function render(message){const rows=visible(), totals=rows.reduce((a,r)=>(['visits','applications','consultations','accounts_opened','first_deposits'].forEach(k=>a[k]+=n(r[k])),a),{visits:0,applications:0,consultations:0,accounts_opened:0,first_deposits:0});
+ const labels=[['visits','유입'],['applications','신청'],['consultations','상담'],['accounts_opened','계좌 개설'],['first_deposits','첫 입금']];
+ document.querySelector('#kpis').innerHTML=labels.map(([k,l])=>`<div class="kpi"><span>${l}</span><strong>${totals[k]}</strong></div>`).join('');
+ document.querySelector('#rows').innerHTML=rows.length?rows.map(r=>`<tr class="${String(r.is_test).toLowerCase()==='true'?'test':''}"><td>${esc(r.utm_source||'(direct)')} / ${esc(r.utm_medium||'(none)')}</td><td>${esc(r.utm_content||'(not set)')}</td><td>${n(r.visits)}</td><td>${n(r.applications)}</td><td>${n(r.consultations)}</td><td>${n(r.accounts_opened)}</td><td>${n(r.first_deposits)}</td><td>${rate(n(r.applications),n(r.visits))}</td><td>${rate(n(r.consultations),n(r.applications))}</td><td>${rate(n(r.accounts_opened),n(r.consultations))}</td><td>${rate(n(r.first_deposits),n(r.accounts_opened))}</td></tr>`).join(''):'<tr><td colspan="11" style="text-align:center">데이터 없음 — 정상 대기 상태</td></tr>';
+ document.querySelector('#status').textContent=message||`${rows.length}개 집계행 표시`;}
+function parseCSV(text){const lines=text.trim()?text.trim().split(/\r?\n/):[];if(!lines.length)return[];const heads=lines.shift().split(',').map(x=>x.trim());const missing=columns.filter(x=>!heads.includes(x));if(missing.length)throw Error(`필수 열 누락: ${missing.join(', ')}`);return lines.map(line=>{const cells=line.split(',');return Object.fromEntries(heads.map((h,i)=>[h,(cells[i]||'').trim()]))})}
+document.querySelector('#file').onchange=async e=>{try{data=parseCSV(await e.target.files[0].text());render('CSV를 불러왔습니다.')}catch(err){render(err.message)}};
+document.querySelector('#empty').onclick=()=>{data=[];render('빈 데이터 정상 동작 확인')};
+document.querySelector('#sample').onclick=()=>{data=sample;document.querySelector('#includeTest').checked=true;render('테스트 리드 1건 반영 확인')};
+document.querySelector('#shortform').onclick=()=>{data=shortformSample;document.querySelector('#includeTest').checked=false;document.querySelector('#sourceFilter').value='';render('숏폼 4채널이 각각 한 행으로 분리됨')};
+document.querySelector('#includeTest').onchange=()=>render();
+document.querySelector('#sourceFilter').onchange=()=>render();
+document.querySelector('#download').onclick=()=>{const body=columns.join(',')+'\n';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([body],{type:'text/csv'}));a.download='ib-funnel-template.csv';a.click();URL.revokeObjectURL(a.href)};
+render('빈 데이터 정상 동작 확인');
+</script></body></html>
