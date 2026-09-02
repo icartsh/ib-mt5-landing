@@ -1,0 +1,7 @@
+# 개인정보가 들어 있다. 절대 커밋하지 않는다.
+data/
+.env
+
+node_modules/
+.DS_Store
+*.log

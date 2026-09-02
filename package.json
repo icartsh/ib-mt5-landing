@@ -1,0 +1,13 @@
+{
+  "name": "ib-landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MT5 해외선물 1:1 세팅 지원 — 랜딩페이지 + 신청 폼 + 리드 저장/알림",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server/server.mjs",
+    "mock-webhook": "node scripts/mock-webhook.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  }
+}
