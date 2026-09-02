@@ -87,6 +87,56 @@ if (extra.length) {
   fail(`[개인정보] 허용된 4개 항목 외 수집 필드: ${extra.join(", ")} — 필요 이상 수집 금지`);
 }
 
+/* ---------- 5. vercel.json — 배포가 아예 거절되지 않는가 ---------- */
+
+/* JSON 에는 주석이 없어서 "//" 키로 메모를 달았다가 배포가 통째로 막혔다.
+   Vercel 은 스키마에 없는 속성을 거절한다:
+     Invalid request: should NOT have additional property //
+   빌드 로그가 아니라 Import 화면에서 튕기기 때문에 사장님이 먼저 마주쳤다.
+   메모는 README 에 적고, 여기서는 그 키가 다시 생기지 않게 막는다. */
+{
+  const raw = readFileSync(new URL("../vercel.json", import.meta.url), "utf8");
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    fail(`[vercel.json] JSON 파싱 실패 — ${err.message}`);
+    parsed = null;
+  }
+
+  if (parsed) {
+    const commentKeys = [];
+    (function walk(node, path) {
+      if (Array.isArray(node)) return node.forEach((v, i) => walk(v, `${path}[${i}]`));
+      if (!node || typeof node !== "object") return;
+      for (const [k, v] of Object.entries(node)) {
+        if (k === "//" || k.startsWith("//")) commentKeys.push(`${path}.${k}`);
+        walk(v, `${path}.${k}`);
+      }
+    })(parsed, "$");
+
+    if (commentKeys.length) {
+      fail(
+        `[vercel.json] 주석 키 ${commentKeys.join(", ")} — Vercel 이 배포를 거절한다. ` +
+          `설명은 README 에 적을 것.`
+      );
+    }
+
+    /* 스키마에 있는 속성만 쓴다. 오타 하나로 Import 가 막히는 것을 미리 잡는다. */
+    const ALLOWED_TOP = new Set([
+      "$schema", "buildCommand", "bunVersion", "cleanUrls", "crons", "devCommand",
+      "fluid", "framework", "functions", "headers", "ignoreCommand", "images",
+      "installCommand", "outputDirectory", "public", "redirects", "bulkRedirectsPath",
+      "regions", "functionFailoverRegions", "rewrites", "trailingSlash",
+    ]);
+    const unknown = Object.keys(parsed).filter((k) => !ALLOWED_TOP.has(k));
+    if (unknown.length) {
+      fail(`[vercel.json] 스키마에 없는 최상위 속성: ${unknown.join(", ")} — Vercel 이 거절한다.`);
+    }
+  }
+}
+
 /* ---------- 결과 ---------- */
 
 if (failures.length) {
