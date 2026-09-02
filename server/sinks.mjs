@@ -100,10 +100,14 @@ async function telegramApi(token, method) {
   return data?.result;
 }
 
-async function resolveChatId(token) {
-  if (config.telegramChatId) return config.telegramChatId;
-  if (cachedChatId) return cachedChatId;
-
+/**
+ * 봇에게 온 최근 대화들. 읽기 전용(getUpdates)이라 부작용이 없다.
+ *
+ * `resolveChatId` 는 후보가 정확히 하나일 때만 목적지로 쓴다. 그런데 후보가 둘 이상이면
+ * 접수가 멈추고, 그때 운영자에게 필요한 것은 "둘이다" 가 아니라 **어느 것이 자기 대화인지**다.
+ * 그래서 판정과 목록을 분리해 둔다 — 운영 통로(api/setup.js)가 이 목록을 그대로 보여준다.
+ */
+export async function listChatCandidates(token) {
   const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getUpdates?limit=100`, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
@@ -115,11 +119,26 @@ async function resolveChatId(token) {
 
   const candidates = [];
   for (const update of updates) {
-    const chatId = update?.message?.chat?.id ?? update?.channel_post?.chat?.id;
-    if (chatId === undefined || chatId === null) continue;
-    const id = String(chatId);
-    if (!candidates.includes(id)) candidates.push(id);
+    const chat = update?.message?.chat ?? update?.channel_post?.chat;
+    if (!chat || chat.id === undefined || chat.id === null) continue;
+    const id = String(chat.id);
+    if (candidates.some((c) => c.id === id)) continue;
+    candidates.push({
+      id,
+      type: chat.type || "",
+      /* 사람이 고를 수 있어야 하므로 이름을 같이 준다. 숫자만 보여주면 고를 수가 없다. */
+      name: chat.title || [chat.first_name, chat.last_name].filter(Boolean).join(" "),
+      username: chat.username ? `@${chat.username}` : "",
+    });
   }
+  return candidates;
+}
+
+async function resolveChatId(token) {
+  if (config.telegramChatId) return config.telegramChatId;
+  if (cachedChatId) return cachedChatId;
+
+  const candidates = await listChatCandidates(token);
 
   /* 운영자가 /start 를 보내기 전까지는 몇 번을 다시 눌러도 같은 결과다. */
   if (candidates.length === 0) {
@@ -135,7 +154,7 @@ async function resolveChatId(token) {
     );
   }
 
-  cachedChatId = candidates[0];
+  cachedChatId = candidates[0].id;
   return cachedChatId;
 }
 
