@@ -75,8 +75,7 @@
   /* 상담 연결은 전화 콜백 한 가지다 (사장님 확정, 2026-09-02). 카카오 경로는 없다 —
      숨김 처리해 두는 대신 아예 걷어냈다. 살아 있지 않은 분기는 언젠가 되살아난다. */
 
-  if (CFG.brandName) document.getElementById("brand-name").textContent = CFG.brandName;
-  if (CFG.brandContact) document.getElementById("brand-contact").textContent = CFG.brandContact;
+  /* 푸터 사업자 표기는 brand.js 가 채운다 — 폼이 없는 콘텐츠 페이지도 같은 푸터를 쓴다. */
 
   /* 리드 수집 서버가 붙지 않은 배포(디자인 검토용)에서는 그 사실을 숨기지 않는다.
      실제 신청자가 접수된 줄 알고 기다리는 상황을 만들면 안 된다. */

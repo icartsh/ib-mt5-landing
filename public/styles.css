@@ -407,6 +407,218 @@ input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--er
   .sticky-cta { transition: none; }
 }
 
+/* ---------- 상단 내비게이션 (IB-10: 페이지가 3개로 늘었다) ---------- */
+
+.topnav {
+  background: var(--navy);
+  color: #fff;
+  font-size: 13.5px;
+}
+.topnav .wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+}
+.topnav a { color: #cfe0f5; text-decoration: none; }
+.topnav a[aria-current="page"] { color: #fff; font-weight: 700; }
+
+.topnav-home { font-weight: 700; letter-spacing: -0.01em; white-space: nowrap; }
+
+.topnav-links {
+  display: flex;
+  gap: 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.topnav-links a { white-space: nowrap; }
+
+/* 콘텐츠 페이지의 히어로는 폼이 없으므로 더 낮게 잡는다 — 본문이 먼저 보여야 한다. */
+.hero-doc { padding: 34px 0 30px; }
+.hero-doc h1 { font-size: 26px; }
+.hero-doc .sub { margin-bottom: 0; }
+
+/* ---------- 부가 버튼 / CTA 묶음 ---------- */
+
+.btn-ghost {
+  background: #fff;
+  color: var(--accent-ink);
+  border: 1.5px solid var(--accent);
+  font-size: 15.5px;
+  padding: 14px 20px;
+}
+.btn-ghost:active { background: #f0f6ff; }
+.sec-alt .btn-ghost { background: #fff; }
+
+.cta-stack { display: grid; gap: 10px; }
+.cta-stack-inline { margin-top: 22px; }
+
+.sec-cta { background: var(--bg-alt); }
+
+/* ---------- 사양 표 ---------- */
+
+/* 표는 데스크톱에서 표로, 좁은 화면에서는 카드로 접힌다 (아래 미디어쿼리).
+   가로 스크롤로 넘기게 두면 오른쪽 끝에 있는 레버리지·커미션을 아무도 안 본다 —
+   비용 구조를 보여주려고 만든 표에서 비용이 잘리면 표를 넣은 의미가 없다. */
+.spec {
+  width: 100%;
+  margin: 18px 0 0;
+  border-collapse: collapse;
+  font-size: 13px;
+  word-break: keep-all;
+}
+.spec caption {
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  padding-bottom: 8px;
+  white-space: normal;
+}
+.spec th, .spec td {
+  border: 1px solid var(--line);
+  padding: 8px 7px;
+  text-align: left;
+  vertical-align: middle;
+}
+.spec thead th {
+  background: var(--bg-alt);
+  color: var(--ink-2);
+  font-weight: 700;
+  font-size: 12.5px;
+}
+.spec tbody th { background: #fff; font-weight: 700; color: var(--ink); }
+.spec td { color: var(--ink-2); }
+.sec-alt .spec thead th { background: #eef1f5; }
+
+/* 좁은 화면: 행 하나를 카드 하나로 편다.
+   헤더는 눈에서만 감추고(스크린리더에는 남긴다) 각 칸이 자기 항목명을 달고 다닌다.
+   그래서 열이 몇 개든 잘리지 않는다 — 계좌표는 5열이라 어떤 식으로 줄여도 안 들어간다. */
+@media (max-width: 519px) {
+  .spec, .spec tbody, .spec tr, .spec tbody th, .spec td { display: block; }
+  /* display:block 표 안에서 caption 은 폭 계산이 어긋나 한 글자씩 접힌다 */
+  .spec caption { display: block; }
+
+  .spec thead {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .spec tr {
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: #fff;
+  }
+  .spec tr:last-child { margin-bottom: 0; }
+
+  .spec tbody th {
+    border: 0;
+    background: var(--bg-alt);
+    font-size: 14px;
+    padding: 9px 12px;
+  }
+  .sec-alt .spec tbody th { background: #eef1f5; }
+
+  .spec td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 14px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    padding: 8px 12px;
+    font-size: 13.5px;
+    text-align: right;
+  }
+  .spec td::before {
+    content: attr(data-label);
+    flex: none;
+    color: var(--ink-3);
+    font-weight: 600;
+    text-align: left;
+  }
+}
+
+/* ---------- 체크포인트 카드 ---------- */
+
+.check .check-why,
+.check .check-how { font-size: 14.5px; }
+.check .check-why strong:first-child,
+.check .check-how strong:first-child { color: var(--ink); }
+
+.check-mim {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: #f0f6ff;
+  border-radius: var(--r);
+}
+.check-mim p { font-size: 14.5px; margin-bottom: 8px; }
+.check-mim p:last-child { margin-bottom: 0; }
+.check-mim a { color: var(--accent-ink); }
+
+.check-mim-head {
+  font-size: 12px !important;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent-ink) !important;
+  margin-bottom: 6px !important;
+}
+
+/* 불리한 사실을 같은 카드 안에, 눈에 띄게 둔다. 접어 두면 그건 고지가 아니다. */
+.check-caution {
+  margin-top: 10px !important;
+  padding: 11px 13px;
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-line);
+  border-radius: var(--r);
+  font-size: 13.5px !important;
+  color: #6a5a2a !important;
+}
+.check-caution strong { color: #4a3f14; }
+
+/* ---------- 거르는 신호 목록 ---------- */
+
+.checklist-warn li::before {
+  border: 0;
+  transform: none;
+  top: 17px;
+  left: 6px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--err);
+}
+
+/* ---------- 절차 단계 (긴 버전) ---------- */
+
+.steps-lg li { padding-bottom: 28px; }
+
+.step-tip {
+  margin: 10px 0 0;
+  padding: 11px 13px;
+  background: var(--bg-alt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.sec-alt .step-tip { background: #fff; }
+
+/* ---------- IB 이해관계 고지 ---------- */
+
+.ib-disclosure {
+  margin-top: 12px !important;
+  padding-top: 12px;
+  border-top: 1px solid var(--warn-line);
+  font-weight: 600;
+}
+
 /* ---------- 데스크톱 ---------- */
 
 @media (min-width: 720px) {
@@ -419,4 +631,14 @@ input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--er
   .btn-note { text-align: left; }
   .center .btn-note { text-align: center; }
   .sticky-cta { left: auto; right: 24px; width: 300px; }
+
+  .hero-doc { padding: 52px 0 44px; }
+  .hero-doc h1 { font-size: 34px; }
+  .spec { font-size: 13.5px; }
+  .spec th, .spec td { padding: 9px 11px; }
+  .cta-stack {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    align-items: start;
+  }
+  .cta-stack .btn-primary { width: 100%; min-width: 0; }
 }

@@ -223,10 +223,21 @@ async function serveStatic(req, res, url) {
   if (pathname.endsWith("/")) pathname += "index.html";
 
   // 경로 탈출 방지: 정규화 후 반드시 public 아래여야 한다.
-  const filePath = normalize(join(PUBLIC_DIR, pathname));
+  let filePath = normalize(join(PUBLIC_DIR, pathname));
   if (!filePath.startsWith(PUBLIC_DIR)) {
     res.writeHead(403).end("forbidden");
     return;
+  }
+
+  /* Vercel 의 cleanUrls 와 동작을 맞춘다 — 배포에서는 `/broker` 가 broker.html 로 뜬다.
+     로컬만 404 가 나면 링크를 확인할 방법이 없어서, 결국 배포한 뒤에 눌러보게 된다. */
+  if (!extname(filePath)) {
+    try {
+      const info = await stat(`${filePath}.html`);
+      if (info.isFile()) filePath = `${filePath}.html`;
+    } catch {
+      /* 확장자 없는 경로에 대응하는 html 이 없으면 원래 경로 그대로 404 를 낸다 */
+    }
   }
 
   try {
