@@ -9,6 +9,8 @@
     "start": "node server/server.mjs",
     "mock-webhook": "node scripts/mock-webhook.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "copy-guard": "node scripts/copy-guard.mjs"
+    "smoke-serverless": "node scripts/smoke-serverless.mjs",
+    "copy-guard": "node scripts/copy-guard.mjs",
+    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs"
   }
 }

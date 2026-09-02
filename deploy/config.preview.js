@@ -6,7 +6,6 @@
  */
 window.IB_CONFIG = {
   leadEndpoint: "",
-  kakaoUrl: "",
   brandName: "",
   brandContact: "",
 };

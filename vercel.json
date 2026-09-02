@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": "정적 파일은 public/, API 는 api/lead.js 가 자동으로 /api/lead 로 붙는다. 빌드 단계에서 문구 가드를 돌려 표현 제약 위반이 라이브로 나가는 것을 막는다 (GitHub Pages 워크플로와 같은 규칙).",
+
+  "buildCommand": "node scripts/copy-guard.mjs",
+  "outputDirectory": "public",
+  "cleanUrls": true,
+
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    },
+    {
+      "//": "배포마다 값이 달라지는 파일이라 캐시하지 않는다.",
+      "source": "/config.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+    }
+  ]
+}

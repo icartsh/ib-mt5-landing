@@ -6,7 +6,8 @@ import { randomUUID } from "node:crypto";
 
 import { config, ROOT } from "./config.mjs";
 import { saveLead, readLeads } from "./store.mjs";
-import { notifyLead } from "./notify.mjs";
+import { buildLead, isHoneypotHit, validateLead } from "./lead-core.mjs";
+import { deliverLead, summarize } from "./sinks.mjs";
 
 const PUBLIC_DIR = join(ROOT, "public");
 
@@ -87,43 +88,7 @@ function rateLimited(ip) {
   return false;
 }
 
-/* -------------------------------------------------------------------- */
-/* 검증 — 클라이언트 검증을 신뢰하지 않고 서버에서 다시 본다.            */
-/* -------------------------------------------------------------------- */
-
-const EXPERIENCES = new Set(["입문", "경험 있음"]);
-const SOURCES = new Set([
-  "네이버 블로그", "인스타그램", "유튜브", "네이버 검색", "지인 소개", "기타",
-]);
-
-function validateLead(body) {
-  const errors = [];
-  const name = String(body?.name ?? "").trim();
-  const contact = String(body?.contact ?? "").trim();
-  const experience = String(body?.experience ?? "").trim();
-  const source = String(body?.source ?? "").trim();
-
-  if (name.length < 2 || name.length > 40) errors.push("이름을 확인해 주세요.");
-
-  const digits = contact.replace(/[\s.\-()]/g, "");
-  if (!/^\+?\d{9,15}$/.test(digits)) errors.push("연락처 형식을 확인해 주세요.");
-
-  if (!EXPERIENCES.has(experience)) errors.push("거래 경험 수준을 선택해 주세요.");
-  if (!SOURCES.has(source)) errors.push("유입 경로를 선택해 주세요.");
-  if (body?.consent !== true) errors.push("개인정보 수집·이용 동의가 필요합니다.");
-
-  return { errors, clean: { name, contact, contactNormalized: digits, experience, source } };
-}
-
-function pickUtm(attribution) {
-  const utm = attribution?.utm ?? {};
-  const out = {};
-  for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
-    const value = utm[key];
-    if (typeof value === "string" && value) out[key] = value.slice(0, 120);
-  }
-  return out;
-}
+/* 검증·조립은 server/lead-core.mjs 가 담당한다 (서버리스 함수와 같은 규칙을 쓰기 위해). */
 
 async function readBody(req, limitBytes = 32 * 1024) {
   const chunks = [];
@@ -157,49 +122,35 @@ async function handleLead(req, res) {
 
   // 허니팟: 사람에게 보이지 않는 필드가 채워져 있으면 봇이다.
   // 봇에게는 성공한 것처럼 응답해서 재시도를 유도하지 않는다.
-  if (String(body?.company ?? "").trim()) {
+  if (isHoneypotHit(body)) {
     console.log(`[lead] honeypot 차단 ip=${ip}`);
     return sendJson(res, 200, { ok: true, id: "skipped" }, cors);
   }
 
-  const { errors, clean } = validateLead(body);
+  const { errors } = validateLead(body);
   if (errors.length) {
     return sendJson(res, 400, { ok: false, error: errors[0], errors }, cors);
   }
 
-  const lead = {
+  const lead = buildLead(body, {
     id: randomUUID(),
     receivedAt: new Date().toISOString(),
-    ...clean,
-    consent: true,
-    consentText: "개인정보 수집·이용 동의 (이름·연락처·거래 경험·유입 경로 / 상담 연락 목적 / 상담 종료 후 6개월)",
-    attribution: {
-      utm: pickUtm(body?.attribution),
-      referrer: String(body?.attribution?.referrer ?? "").slice(0, 300),
-      landingPath: String(body?.attribution?.landingPath ?? "").slice(0, 300),
-    },
-    page: String(body?.page ?? "").slice(0, 500),
-    userAgent: String(req.headers["user-agent"] ?? "").slice(0, 300),
-  };
+    userAgent: req.headers["user-agent"] ?? "",
+  });
 
-  let stored;
+  // 원장이 먼저다. 여기 실패하면 리드를 잃으므로 그때만 사용자에게 에러를 낸다.
   try {
-    stored = await saveLead(lead);
+    await saveLead(lead);
   } catch (err) {
     console.error("[lead] 저장 실패", err);
     return sendJson(res, 500, { ok: false, error: "저장에 실패했습니다." }, cors);
   }
 
-  // 알림은 저장 성공 이후. 알림이 실패해도 사용자에게는 성공으로 응답한다
-  // (리드는 이미 안전하게 남았고, 사용자가 재제출할 이유가 없다).
-  const notified = await notifyLead(lead);
+  // 시트·알림은 원장 기록 이후. 전부 실패해도 리드는 이미 안전하므로 성공으로 답한다
+  // (사용자가 재제출할 이유가 없다).
+  const { results } = await deliverLead(lead);
 
-  console.log(
-    `[lead] 저장 완료 id=${lead.id} utm=${JSON.stringify(lead.attribution.utm)} ` +
-      `sheets=${stored.remote.attempted ? stored.remote.ok : "skip"} ` +
-      `notify=${notified.attempted ? `${notified.kind}:${notified.ok}` : "skip"}` +
-      `${notified.attempted && !notified.ok ? ` (${notified.detail})` : ""}`
-  );
+  console.log(`[lead] 저장 완료 id=${lead.id} 채널=${lead.source} ${summarize(results)}`);
 
   return sendJson(res, 200, { ok: true, id: lead.id }, cors);
 }

@@ -1,0 +1,207 @@
+/**
+ * 서버리스 리드 엔드포인트(api/lead.js) 엔드투엔드 검사.
+ *
+ * 진짜 텔레그램 대신 가짜 API 서버를 띄워서, 실제로 나가는 HTTP 요청까지 확인한다.
+ * 특히 확인하고 싶은 것은 "아무 데도 저장되지 않았는데 접수됐다고 답하지 않는가" 다 —
+ * 서버리스에는 로컬 원장이 없어서 이게 무너지면 리드가 조용히 사라진다.
+ *
+ * 사용: node scripts/smoke-serverless.mjs
+ */
+import { createServer } from "node:http";
+
+const PORT = 8899;
+
+/* ------------------------------------------------------------------ */
+/* 가짜 텔레그램 API                                                   */
+/* ------------------------------------------------------------------ */
+
+const sent = [];          // 봇이 보낸 sendMessage 본문들
+let failSendMessage = false;
+let updatesPayload = { ok: true, result: [{ message: { chat: { id: 987654321 } } }] };
+
+const telegram = createServer((req, res) => {
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
+
+  if (url.pathname.endsWith("/getUpdates")) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(updatesPayload));
+  }
+
+  if (url.pathname.endsWith("/sendMessage")) {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      if (failSendMessage) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        return res.end('{"ok":false,"description":"simulated outage"}');
+      }
+      sent.push(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
+
+  res.writeHead(404).end("nope");
+});
+
+await new Promise((resolve) => telegram.listen(PORT, "127.0.0.1", resolve));
+
+/* ------------------------------------------------------------------ */
+/* 환경 — config.mjs 가 import 시점에 읽으므로 반드시 먼저 세팅한다.   */
+/* ------------------------------------------------------------------ */
+
+process.env.TELEGRAM_API_BASE = `http://127.0.0.1:${PORT}`;
+process.env.TELEGRAM_BOT_TOKEN = "test-token-123";
+process.env.TELEGRAM_CHAT_ID = "";        // 자동 탐색 경로를 태운다
+process.env.SHEETS_WEBHOOK_URL = "";
+process.env.NOTIFY_KIND = "none";
+process.env.NOTIFY_WEBHOOK_URL = "";
+process.env.RATE_MAX = "3";
+process.env.RATE_WINDOW_MS = "600000";
+
+const { default: handler } = await import("../api/lead.js");
+
+/* ------------------------------------------------------------------ */
+/* 테스트 도구                                                         */
+/* ------------------------------------------------------------------ */
+
+let pass = 0;
+const failures = [];
+
+function check(label, cond, detail = "") {
+  if (cond) {
+    pass += 1;
+    console.log(`  ok    ${label}`);
+  } else {
+    failures.push(`${label}${detail ? ` — ${detail}` : ""}`);
+    console.log(`  FAIL  ${label}${detail ? ` — ${detail}` : ""}`);
+  }
+}
+
+function mockRes() {
+  const r = { statusCode: 200, headers: {}, payload: null, ended: false };
+  r.setHeader = (k, v) => { r.headers[k] = v; return r; };
+  r.status = (c) => { r.statusCode = c; return r; };
+  r.json = (b) => { r.payload = b; r.ended = true; return r; };
+  r.end = () => { r.ended = true; return r; };
+  return r;
+}
+
+function call(body, { ip = "10.0.0.1", method = "POST" } = {}) {
+  const req = {
+    method,
+    headers: { "x-forwarded-for": ip, "user-agent": "smoke-test/1.0" },
+    body,
+    socket: { remoteAddress: ip },
+  };
+  const res = mockRes();
+  return handler(req, res).then(() => res);
+}
+
+const validLead = (over = {}) => ({
+  name: "김테스트",
+  contact: "010-5555-1234",
+  experience: "입문",
+  source: "네이버 블로그",
+  consent: true,
+  attribution: {
+    utm: { utm_source: "naver_blog", utm_medium: "post", utm_campaign: "cost_calc" },
+    referrer: "https://blog.naver.com/",
+    landingPath: "/?utm_source=naver_blog",
+  },
+  page: "https://example.com/?utm_source=naver_blog",
+  ...over,
+});
+
+/* ------------------------------------------------------------------ */
+
+console.log("\n[1] 정상 리드 — chat_id 자동 탐색 + 텔레그램 발송");
+{
+  const res = await call(validLead(), { ip: "10.0.0.1" });
+  check("HTTP 200", res.statusCode === 200, `got ${res.statusCode}`);
+  check("ok:true + 리드 ID 발급", res.payload?.ok === true && Boolean(res.payload.id));
+  check("텔레그램 1건 발송", sent.length === 1, `sent=${sent.length}`);
+
+  const msg = sent[0];
+  check("chat_id 자동 탐색 성공", String(msg?.chat_id) === "987654321", `chat_id=${msg?.chat_id}`);
+  check("연락처 전체가 담김 (전화를 걸어야 하므로)", /010-5555-1234/.test(msg?.text || ""));
+  check("이름 포함", /김테스트/.test(msg?.text || ""));
+  check("utm 채널 포함", /naver_blog/.test(msg?.text || ""));
+  check("사용자가 고른 유입 경로 포함", /네이버 블로그/.test(msg?.text || ""));
+}
+
+console.log("\n[2] 저장 실패 — 접수됐다고 답하면 안 된다");
+{
+  failSendMessage = true;
+  const before = sent.length;
+  const res = await call(validLead(), { ip: "10.0.0.2" });
+  check("HTTP 503", res.statusCode === 503, `got ${res.statusCode}`);
+  check("ok:false", res.payload?.ok === false);
+  check("재시도 안내 문구", /다시 시도/.test(res.payload?.error || ""), res.payload?.error);
+  check("발송된 메시지 없음", sent.length === before);
+  failSendMessage = false;
+}
+
+console.log("\n[3] 검증 — 클라이언트를 믿지 않는다");
+{
+  const cases = [
+    ["이름 누락", { name: "" }],
+    ["연락처 형식 오류", { contact: "abc" }],
+    ["거래 경험 값 위조", { experience: "전문가" }],
+    ["유입 경로 값 위조", { source: "해킹" }],
+    ["동의 없음", { consent: false }],
+  ];
+  // 레이트리밋이 검증보다 먼저 걸리므로 케이스마다 IP 를 달리한다.
+  for (const [i, [label, over]] of cases.entries()) {
+    const res = await call(validLead(over), { ip: `10.0.3.${i + 1}` });
+    check(label + " → 400", res.statusCode === 400, `got ${res.statusCode}`);
+  }
+}
+
+console.log("\n[4] 허니팟 — 봇에게는 실패를 알려주지 않는다");
+{
+  const before = sent.length;
+  const res = await call(validLead({ company: "봇이 채운 값" }), { ip: "10.0.0.4" });
+  check("HTTP 200 (성공한 척)", res.statusCode === 200, `got ${res.statusCode}`);
+  check("id=skipped", res.payload?.id === "skipped");
+  check("알림 안 나감", sent.length === before, `sent=${sent.length} before=${before}`);
+}
+
+console.log("\n[5] 레이트리밋 — 같은 IP 반복 제출");
+{
+  const ip = "10.0.0.5";
+  const codes = [];
+  for (let i = 0; i < 5; i += 1) {
+    codes.push((await call(validLead(), { ip })).statusCode);
+  }
+  check("RATE_MAX=3 초과분은 429", codes.filter((c) => c === 429).length === 2, codes.join(","));
+}
+
+console.log("\n[6] 메서드 제한");
+{
+  const res = await call(validLead(), { ip: "10.0.0.6", method: "GET" });
+  check("GET → 405", res.statusCode === 405, `got ${res.statusCode}`);
+}
+
+console.log("\n[7] chat_id 를 못 찾는 경우 — 조용히 성공하지 않는다");
+{
+  const { __testing } = await import("../server/sinks.mjs");
+  __testing.resetChatIdCache();
+  updatesPayload = { ok: true, result: [] };   // 아무도 봇에게 말을 건 적이 없다
+
+  const res = await call(validLead(), { ip: "10.0.0.7" });
+  check("HTTP 503", res.statusCode === 503, `got ${res.statusCode}`);
+  check("ok:false", res.payload?.ok === false);
+}
+
+/* ------------------------------------------------------------------ */
+
+telegram.close();
+
+console.log(`\n${"-".repeat(60)}`);
+if (failures.length) {
+  console.error(`실패 ${failures.length}건:\n` + failures.map((f) => `  - ${f}`).join("\n"));
+  process.exit(1);
+}
+console.log(`PASS  ${pass}개 검사 통과 — 서버리스 리드 접수 경로 정상`);

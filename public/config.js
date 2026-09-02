@@ -11,9 +11,6 @@ window.IB_CONFIG = {
    */
   leadEndpoint: "/api/lead",
 
-  /** 카카오톡 오픈채팅 / 1:1 채널 주소. 확정 전에는 비워 둔다 (버튼이 자동으로 숨는다). */
-  kakaoUrl: "",
-
   /** 푸터 표기. 사업자 정보 확정 후 채운다. */
   brandName: "",
   brandContact: "",

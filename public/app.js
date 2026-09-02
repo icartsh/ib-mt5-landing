@@ -72,22 +72,8 @@
   var donePanel = document.getElementById("done-panel");
   var stickyCta = document.getElementById("sticky-cta");
 
-  /* 카카오 링크: 주소가 없으면 버튼을 숨긴다 (죽은 링크를 노출하지 않는다) */
-  ["kakao-link", "kakao-link-2"].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (CFG.kakaoUrl) el.href = CFG.kakaoUrl;
-    else el.hidden = true;
-  });
-
-  var talkSection = document.getElementById("talk");
-  if (talkSection && !CFG.kakaoUrl) talkSection.hidden = true;
-
-  /* 카카오 버튼을 감춘 경우, 그 버튼을 가리키던 안내 문장도 같이 바꾼다 */
-  var doneLead = document.getElementById("done-lead");
-  if (doneLead && !CFG.kakaoUrl) {
-    doneLead.textContent = "담당자가 남겨주신 연락처로 1:1 연락드립니다.";
-  }
+  /* 상담 연결은 전화 콜백 한 가지다 (사장님 확정, 2026-09-02). 카카오 경로는 없다 —
+     숨김 처리해 두는 대신 아예 걷어냈다. 살아 있지 않은 분기는 언젠가 되살아난다. */
 
   if (CFG.brandName) document.getElementById("brand-name").textContent = CFG.brandName;
   if (CFG.brandContact) document.getElementById("brand-contact").textContent = CFG.brandContact;

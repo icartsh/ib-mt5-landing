@@ -22,7 +22,7 @@
     <h1>해외선물,<br />시작하는 데<br /><em>실제로 얼마가</em> 필요할까요?</h1>
     <p class="sub">증거금·수수료·마이크로 계약까지 1:1로 계산해 드립니다.</p>
     <a class="btn btn-primary" href="#apply" data-cta="hero">내 조건으로 비용 계산받기</a>
-    <p class="btn-note">신청 후 담당자가 1:1로 연락드립니다. 상담은 무료입니다.</p>
+    <p class="btn-note">신청 후 담당자가 전화로 연락드립니다. 상담은 무료입니다.</p>
   </div>
 </header>
 
@@ -124,7 +124,7 @@
   <section class="sec sec-form" id="apply">
     <div class="wrap">
       <h2>내 조건으로 비용 계산받기</h2>
-      <p class="form-lead">신청 후 담당자가 1:1로 연락드립니다. 상담은 무료입니다.</p>
+      <p class="form-lead">신청 후 담당자가 전화로 연락드립니다. 상담은 무료입니다.</p>
 
       <form id="lead-form" novalidate>
         <div class="field">
@@ -138,7 +138,7 @@
           <label for="contact">연락처 <span class="req" aria-hidden="true">*</span></label>
           <input type="tel" id="contact" name="contact" autocomplete="tel" required
                  inputmode="tel" maxlength="20" placeholder="010-0000-0000" />
-          <p class="hint">상담 연락에만 사용합니다.</p>
+          <p class="hint">상담 전화에만 사용합니다. 문자·광고 발송에는 쓰지 않습니다.</p>
           <p class="err" data-err="contact"></p>
         </div>
 
@@ -197,25 +197,42 @@
         <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
           내 조건으로 비용 계산받기
         </button>
-        <p class="btn-note">신청 후 담당자가 1:1로 연락드립니다. 상담은 무료입니다.</p>
+        <p class="btn-note">신청 후 담당자가 전화로 연락드립니다. 상담은 무료입니다.</p>
         <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
       </form>
 
       <!-- 제출 성공 화면 -->
       <div class="done" id="done-panel" hidden>
         <h3>신청이 접수되었습니다.</h3>
-        <p id="done-lead">담당자가 남겨주신 연락처로 1:1 연락드립니다. 아래에서 바로 상담을 시작하실 수도 있습니다.</p>
-        <a class="btn btn-kakao" id="kakao-link" href="#" target="_blank" rel="noopener">카카오톡으로 바로 상담하기</a>
+        <p id="done-lead">
+          담당자가 남겨주신 번호로 전화드립니다.
+          모르는 번호로 전화가 갈 수 있으니 참고해 주세요.
+        </p>
       </div>
     </div>
   </section>
 
-  <!-- 8. 상담 연결 -->
+  <!-- 8. 상담 진행 방식 — 전화 상담이 유일한 연결 경로이므로 무엇이 오는지 미리 밝힌다 -->
   <section class="sec sec-alt" id="talk">
-    <div class="wrap center">
-      <h2>먼저 물어보고 싶으시다면</h2>
-      <p>폼을 남기기 전에 궁금한 점부터 물어보셔도 됩니다.</p>
-      <a class="btn btn-kakao" id="kakao-link-2" href="#" target="_blank" rel="noopener">카카오톡 오픈채팅 열기</a>
+    <div class="wrap">
+      <h2>신청 후 이렇게 진행됩니다</h2>
+      <ol class="steps">
+        <li>
+          <h3>담당자가 전화드립니다</h3>
+          <p>남겨주신 번호로 직접 연락드립니다. 통화는 10분 내외로 짧게 끝납니다.</p>
+        </li>
+        <li>
+          <h3>조건을 여쭙고 계산해 드립니다</h3>
+          <p>자금 규모와 어떤 상품에 관심이 있으신지 듣고, 그 조건의 증거금과 수수료를 계산해 알려드립니다.</p>
+        </li>
+        <li>
+          <h3>원하시면 세팅까지 함께합니다</h3>
+          <p>계좌 개설을 결정하신 경우에만 MT5 설치와 첫 거래까지 이어서 진행합니다.</p>
+        </li>
+      </ol>
+      <p class="note">
+        계산만 받아보고 끝내셔도 됩니다. <strong>상담은 무료이고, 계좌를 개설하실 의무는 없습니다.</strong>
+      </p>
     </div>
   </section>
 

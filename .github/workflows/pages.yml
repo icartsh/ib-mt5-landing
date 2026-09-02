@@ -28,6 +28,12 @@ jobs:
       - name: Check landing copy constraints
         run: node scripts/copy-guard.mjs
 
+      # 리드 접수 경로가 "아무 데도 저장 안 됐는데 접수됐다고 답하는" 상태로
+      # 회귀하지 않는지 확인한다. 가짜 텔레그램 서버를 띄워서 도는 검사라
+      # 외부 비밀값이 필요 없다.
+      - name: Test lead intake path
+        run: node scripts/smoke-serverless.mjs
+
       - name: Assemble static site
         run: |
           mkdir -p _site
