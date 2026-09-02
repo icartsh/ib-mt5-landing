@@ -21,6 +21,32 @@ const TIMEOUT_MS = 8000;
 /** 테스트에서 가짜 텔레그램 서버로 갈아끼울 수 있게 열어 둔다. */
 const TELEGRAM_API_BASE = process.env.TELEGRAM_API_BASE || "https://api.telegram.org";
 
+/**
+ * 실패를 "다시 눌러서 풀리는 것" 과 "운영자가 손대야 풀리는 것" 으로 가른다.
+ *
+ * 이 구분이 없으면 두 상황이 같은 문구를 받는다. 텔레그램이 잠깐 죽은 것은
+ * 30초 뒤에 풀리지만, 봇에게 /start 를 안 보낸 것이나 시트 액세스 권한이 잘못된
+ * 것은 신청자가 몇 번을 눌러도 그대로다. 후자에게 "잠시 후 다시 시도해 주세요"
+ * 를 보여주면 안 되는 버튼 앞에 사람을 붙잡아 두는 것밖에 안 된다.
+ */
+function configError(message) {
+  const err = new Error(message);
+  err.retryable = false;
+  return err;
+}
+
+/** 명시하지 않은 실패(네트워크 끊김·타임아웃 등)는 일시적인 것으로 본다. */
+function isRetryable(err) {
+  return err?.retryable !== false;
+}
+
+/** 4xx 는 우리 설정이 틀린 것이고, 5xx·429 는 상대 사정이라 기다리면 풀린다. */
+function httpError(status, text) {
+  const err = new Error(`HTTP ${status} ${String(text).slice(0, 200)}`);
+  err.retryable = status >= 500 || status === 429;
+  return err;
+}
+
 async function postJson(url, body) {
   const res = await fetch(url, {
     method: "POST",
@@ -29,7 +55,7 @@ async function postJson(url, body) {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`HTTP ${res.status} ${text.slice(0, 200)}`);
+  if (!res.ok) throw httpError(res.status, text);
   return text;
 }
 
@@ -57,7 +83,8 @@ async function resolveChatId(token) {
   const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getUpdates?limit=10`, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`getUpdates HTTP ${res.status}`);
+  // 401/404 는 토큰이 틀렸거나 무효화된 것 — 기다린다고 풀리지 않는다.
+  if (!res.ok) throw httpError(res.status, `getUpdates`);
 
   const data = await res.json();
   const updates = Array.isArray(data?.result) ? data.result : [];
@@ -72,12 +99,18 @@ async function resolveChatId(token) {
     }
   }
 
-  throw new Error("chat_id 미확인 — 텔레그램에서 봇에게 /start 를 한 번 보내 주세요.");
+  /* 운영자가 /start 를 보내기 전까지는 몇 번을 다시 눌러도 같은 결과다. */
+  throw configError("chat_id 미확인 — 텔레그램에서 봇에게 /start 를 한 번 보내 주세요.");
 }
 
 async function sendTelegram(lead) {
   const token = config.telegramBotToken;
-  if (!token) return { name: "telegram", durable: true, attempted: false, ok: false, detail: "봇 토큰 미설정" };
+  if (!token) {
+    return {
+      name: "telegram", durable: true, attempted: false, ok: false,
+      retryable: false, detail: "봇 토큰 미설정",
+    };
+  }
 
   try {
     const chatId = await resolveChatId(token);
@@ -87,9 +120,15 @@ async function sendTelegram(lead) {
       text: buildNotifyText(lead, { full: true }),
       disable_web_page_preview: true,
     });
-    return { name: "telegram", durable: true, attempted: true, ok: true, detail: `chat=${chatId}` };
+    return {
+      name: "telegram", durable: true, attempted: true, ok: true,
+      retryable: false, detail: `chat=${chatId}`,
+    };
   } catch (err) {
-    return { name: "telegram", durable: true, attempted: true, ok: false, detail: String(err?.message || err) };
+    return {
+      name: "telegram", durable: true, attempted: true, ok: false,
+      retryable: isRetryable(err), detail: String(err?.message || err),
+    };
   }
 }
 
@@ -116,23 +155,31 @@ function assertSheetsAck(text) {
   } catch {
     // JSON 이 아니면 십중팔구 구글 로그인 페이지나 오류 페이지다.
     if (/^\s*<|<html/i.test(head)) {
-      throw new Error("웹앱이 HTML 을 반환 — 배포 액세스 권한이 '모든 사용자' 인지 확인해 주세요.");
+      // 액세스 권한 문제다. 다시 눌러도 계속 로그인 페이지가 온다.
+      throw configError("웹앱이 HTML 을 반환 — 배포 액세스 권한이 '모든 사용자' 인지 확인해 주세요.");
     }
-    throw new Error(`응답을 해석하지 못함: ${head}`);
+    throw configError(`응답을 해석하지 못함: ${head}`);
   }
 
-  if (data?.ok !== true) throw new Error(`웹앱이 저장을 거부: ${data?.error || head}`);
+  // doPost 가 스크립트 오류로 거부한 것이므로 스크립트를 고쳐야 풀린다.
+  if (data?.ok !== true) throw configError(`웹앱이 저장을 거부: ${data?.error || head}`);
 }
 
 async function sendSheets(lead) {
   if (!config.sheetsWebhookUrl) {
-    return { name: "sheets", durable: true, attempted: false, ok: false, detail: "URL 미설정" };
+    return {
+      name: "sheets", durable: true, attempted: false, ok: false,
+      retryable: false, detail: "URL 미설정",
+    };
   }
   try {
     assertSheetsAck(await postJson(config.sheetsWebhookUrl, lead));
-    return { name: "sheets", durable: true, attempted: true, ok: true, detail: "ok" };
+    return { name: "sheets", durable: true, attempted: true, ok: true, retryable: false, detail: "ok" };
   } catch (err) {
-    return { name: "sheets", durable: true, attempted: true, ok: false, detail: String(err?.message || err) };
+    return {
+      name: "sheets", durable: true, attempted: true, ok: false,
+      retryable: isRetryable(err), detail: String(err?.message || err),
+    };
   }
 }
 
@@ -144,10 +191,10 @@ async function sendWebhookNotify(lead) {
   const kind = config.notifyKind;
   const url = config.notifyWebhookUrl;
   if (!["slack", "discord", "generic"].includes(kind)) {
-    return { name: kind || "none", durable: false, attempted: false, ok: false, detail: "미사용" };
+    return { name: kind || "none", durable: false, attempted: false, ok: false, retryable: false, detail: "미사용" };
   }
   if (!url) {
-    return { name: kind, durable: false, attempted: false, ok: false, detail: "URL 미설정" };
+    return { name: kind, durable: false, attempted: false, ok: false, retryable: false, detail: "URL 미설정" };
   }
 
   // 공유 채널일 수 있으므로 번호를 가린다.
@@ -157,9 +204,12 @@ async function sendWebhookNotify(lead) {
 
   try {
     await postJson(url, payload);
-    return { name: kind, durable: false, attempted: true, ok: true, detail: "sent" };
+    return { name: kind, durable: false, attempted: true, ok: true, retryable: false, detail: "sent" };
   } catch (err) {
-    return { name: kind, durable: false, attempted: true, ok: false, detail: String(err?.message || err) };
+    return {
+      name: kind, durable: false, attempted: true, ok: false,
+      retryable: isRetryable(err), detail: String(err?.message || err),
+    };
   }
 }
 
@@ -168,7 +218,11 @@ async function sendWebhookNotify(lead) {
 /**
  * 설정된 모든 sink 에 리드를 보낸다. 한 곳이 실패해도 나머지는 계속 시도한다.
  *
- * @returns {{results: Array, durableConfigured: boolean, durableOk: boolean}}
+ * `durableRetryable` 은 "지금 다시 누르면 될 수도 있는가" 다. 설정이 아예 없는
+ * 경우뿐 아니라 /start 미발송·시트 권한 오류처럼 운영자가 손대야 풀리는 실패도
+ * false 가 되어야 한다. 이 값 하나가 신청자에게 나갈 문구를 가른다.
+ *
+ * @returns {{results: Array, durableConfigured: boolean, durableOk: boolean, durableRetryable: boolean}}
  */
 export async function deliverLead(lead) {
   const tasks = [sendTelegram(lead), sendSheets(lead)];
@@ -183,6 +237,7 @@ export async function deliverLead(lead) {
     results,
     durableConfigured: durable.some((r) => r.attempted),
     durableOk: durable.some((r) => r.ok),
+    durableRetryable: durable.some((r) => r.attempted && !r.ok && r.retryable),
   };
 }
 

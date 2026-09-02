@@ -111,19 +111,20 @@ export default async function handler(req, res) {
     userAgent: req.headers["user-agent"] || "",
   });
 
-  const { results, durableConfigured, durableOk } = await deliverLead(lead);
+  const { results, durableOk, durableRetryable } = await deliverLead(lead);
 
   if (!durableOk) {
-    // 리드를 담을 곳이 하나도 없었다. 사용자에게 사실대로 말하고 재시도를 받는다.
+    // 리드를 담을 곳이 하나도 없었다. 사용자에게 사실대로 말한다.
     console.error(
       `[lead] 저장 실패 — durable sink 없음/전부 실패 id=${lead.id} ${summarize(results)}`
     );
     return res.status(503).json({
       ok: false,
-      /* 설정이 아예 없는 상태는 재시도로 풀리지 않는다. 그 경우에 "잠시 후 다시
-         시도해 주세요" 라고 하면, 몇 번을 눌러도 같은 화면을 보는 사람을 붙잡아
-         두는 것밖에 안 된다. 다시 오게 만드는 쪽이 정직하고 리드도 덜 잃는다. */
-      error: durableConfigured
+      /* 기준은 "설정이 있는가" 가 아니라 "지금 다시 누르면 될 수도 있는가" 다.
+         토큰은 넣었지만 봇에게 /start 를 안 보낸 상태는 설정이 '있는' 상태지만
+         재시도로는 절대 안 풀린다. 그 사람에게 "잠시 후 다시 시도해 주세요" 를
+         보여주면 안 되는 버튼을 계속 누르게 만드는 것밖에 안 된다. */
+      error: durableRetryable
         ? "일시적인 문제로 접수하지 못했습니다. 잠시 후 다시 시도해 주세요."
         : "접수 설정이 완료되지 않았습니다. 지금은 신청을 받을 수 없습니다.",
     });

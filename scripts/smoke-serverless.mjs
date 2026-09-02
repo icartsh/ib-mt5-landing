@@ -214,15 +214,33 @@ console.log("\n[6] 메서드 제한");
   check("GET → 405", res.statusCode === 405, `got ${res.statusCode}`);
 }
 
-console.log("\n[7] chat_id 를 못 찾는 경우 — 조용히 성공하지 않는다");
+console.log("\n[7] 토큰은 넣었는데 봇에게 /start 를 안 보낸 경우");
 {
+  /* 라이브에서 실제로 만들어지는 상태다. 토큰을 환경변수에 넣고 배포까지 끝냈지만
+     운영자가 아직 /start 를 누르지 않았다면 chat_id 를 찾을 수 없다.
+
+     여기서 '설정은 되어 있다' 를 근거로 "잠시 후 다시 시도해 주세요" 를 내보내면
+     안 된다. 운영자가 /start 를 누르기 전까지 신청자는 몇 번을 눌러도 같은 화면을
+     본다. 문구까지 검사하지 않으면 이 조합이 조용히 되살아난다. */
   const { __testing } = await import("../server/sinks.mjs");
   __testing.resetChatIdCache();
   updatesPayload = { ok: true, result: [] };   // 아무도 봇에게 말을 건 적이 없다
 
+  const before = sent.length;
   const res = await call(validLead(), { ip: "10.0.0.7" });
   check("HTTP 503", res.statusCode === 503, `got ${res.statusCode}`);
   check("ok:false", res.payload?.ok === false);
+  check(
+    "'설정이 완료되지 않았습니다' 라고 말한다",
+    /설정이 완료되지 않았습니다/.test(res.payload?.error || ""),
+    res.payload?.error
+  );
+  check(
+    "재시도 안내를 붙이지 않는다 — /start 전까지 결과가 같다",
+    !/다시 시도/.test(res.payload?.error || ""),
+    res.payload?.error
+  );
+  check("메시지 발송 시도 없음", sent.length === before, `sent=${sent.length}`);
 }
 
 console.log("\n[8] 구글 시트만 붙은 경우 — 알림 없이 시트 하나로 접수가 성립하는가");
@@ -257,13 +275,24 @@ console.log("\n[8] 구글 시트만 붙은 경우 — 알림 없이 시트 하�
     sheetsMode = "html_login";
     const res = await call(validLead(), { ip: "10.0.8.3" });
     check("로그인 HTML 응답 → HTTP 503", res.statusCode === 503, `got ${res.statusCode}`);
-    check("재시도 안내 문구", /다시 시도/.test(res.payload?.error || ""), res.payload?.error);
+    /* 액세스 권한을 고치기 전까지는 계속 로그인 페이지가 온다 — 재시도 대상이 아니다. */
+    check(
+      "권한 오류에는 재시도를 권하지 않는다",
+      !/다시 시도/.test(res.payload?.error || ""),
+      res.payload?.error
+    );
   }
 
   {
+    // 반대로 5xx 는 구글 쪽 사정이라 기다리면 풀린다 — 이때는 재시도가 맞는 안내다.
     sheetsMode = "http_500";
     const res = await call(validLead(), { ip: "10.0.8.4" });
     check("웹앱 5xx → HTTP 503", res.statusCode === 503, `got ${res.statusCode}`);
+    check(
+      "일시적 장애에는 재시도를 권한다",
+      /다시 시도/.test(res.payload?.error || ""),
+      res.payload?.error
+    );
   }
 
   config.telegramBotToken = savedToken;
