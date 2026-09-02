@@ -43,18 +43,30 @@ https://ib-mt5-landing.vercel.app
 페이지는 떠 있지만, **접수 채널(텔레그램/시트)이 붙기 전까지 신청은 접수되지 않는다.**
 이 상태로 링크를 뿌리면 유입은 생기는데 리드는 한 건도 안 남는다 — 나중에 복구가 안 된다.
 
-아래 명령이 `{"ok":true,...}` 를 돌려줄 때부터 배포를 시작한다.
+아래 명령이 `"accepting":true` 를 돌려줄 때부터 배포를 시작한다.
 
 ```bash
-curl -s -X POST https://ib-mt5-landing.vercel.app/api/lead \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"게이트확인","contact":"010-0000-0000","experience":"입문",
-       "source":"기타","consent":true,
-       "utm":{"utm_source":"internal","utm_medium":"test","utm_campaign":"qa"}}'
+curl -s https://ib-mt5-landing.vercel.app/api/health
 ```
 
-- `{"ok":true,"id":"…"}` → **통과.** 링크 배포 시작. (이 확인 리드 1건은 알림으로 도착하니 무시하면 된다.)
-- `접수 설정이 완료되지 않았습니다` → **아직.** 접수 채널이 안 붙었다. 뿌리지 않는다.
+- `"accepting":true` → **통과.** 링크 배포 시작.
+- `"accepting":false` → **아직.** 뿌리지 않는다. 같은 응답의 `nextAction` 이 다음에 할 일을 알려준다.
+
+이 확인은 **리드를 만들지 않는다.** 예전 게이트는 진짜 신청을 한 건 넣어 보는
+방식이라 확인할 때마다 가짜 리드가 하나씩 쌓였고, 나중에 진짜 신청과 섞였다.
+
+접수가 막혔을 때 이유를 구분해서 알려주는 것도 이쪽뿐이다. 신청자에게 나가는
+문구는 '토큰 없음' 과 '/start 미발송' 을 **일부러 같게** 두었지만(둘 다 신청자가
+할 수 있는 일이 없다), 고쳐야 하는 사람에게는 그 구분이 필요하다.
+
+```json
+{"accepting":false,
+ "sinks":{"telegram":{"configured":true,"ready":false,
+                      "detail":"chat_id 미확인 — 텔레그램에서 봇에게 /start 를 한 번 보내 주세요."}},
+ "nextAction":"텔레그램에서 봇에게 /start 를 한 번 보내면 접수가 열린다."}
+```
+
+> 토큰이나 chat_id 같은 값은 이 응답에 담기지 않는다. "붙었는가 / 안 붙었는가" 만 답한다.
 
 ---
 
