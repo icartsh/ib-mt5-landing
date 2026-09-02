@@ -331,6 +331,78 @@ console.log("\n[9] 환경변수를 하나도 안 넣고 배포한 경우 — 갓
   config.telegramBotToken = savedToken;
 }
 
+console.log("\n[10] /api/health — 리드를 만들지 않고 배포 게이트를 판정한다");
+{
+  /* 확인용으로 가짜 신청을 넣던 방식은 확인할 때마다 운영자 휴대폰에 가짜 리드를
+     남겼다. 여기서 검사하는 것은 두 가지다: 부작용 없이 판정하는가, 그리고
+     접수가 막힌 이유를 운영자에게 구분해서 알려주는가. */
+  const { default: health, __testing: healthTesting } = await import("../api/health.js");
+  const { config } = await import("../server/config.mjs");
+  const { __testing } = await import("../server/sinks.mjs");
+
+  const callHealth = async (method = "GET") => {
+    const res = mockRes();
+    await health({ method, headers: {} }, res);
+    return res;
+  };
+
+  {
+    // 토큰은 있는데 /start 가 없는 상태 — 지금 라이브가 정확히 여기다.
+    __testing.resetChatIdCache();
+    healthTesting.resetCache();
+    updatesPayload = { ok: true, result: [] };
+    const before = sent.length;
+    const res = await callHealth();
+    check("HTTP 200", res.statusCode === 200, `got ${res.statusCode}`);
+    check("accepting:false — 링크를 뿌리면 안 되는 상태", res.payload?.accepting === false);
+    check("텔레그램은 '설정됨'으로 나온다", res.payload?.sinks?.telegram?.configured === true);
+    check("다만 ready:false", res.payload?.sinks?.telegram?.ready === false);
+    check(
+      "다음 할 일로 /start 를 지목한다",
+      /\/start/.test(res.payload?.nextAction || ""),
+      res.payload?.nextAction
+    );
+    check("리드를 만들지 않는다 — 발송 0건", sent.length === before, `sent=${sent.length}`);
+  }
+
+  {
+    // /start 를 보낸 뒤. 같은 주소가 통과로 뒤집혀야 한다.
+    __testing.resetChatIdCache();
+    healthTesting.resetCache();
+    updatesPayload = { ok: true, result: [{ message: { chat: { id: 987654321 } } }] };
+    const res = await callHealth();
+    check("/start 이후 accepting:true 로 뒤집힌다", res.payload?.accepting === true);
+    check("게이트 통과 문구", /뿌려도 된다/.test(res.payload?.nextAction || ""), res.payload?.nextAction);
+    check(
+      "chat_id 같은 비밀값을 내보내지 않는다",
+      !JSON.stringify(res.payload).includes("987654321"),
+      JSON.stringify(res.payload)
+    );
+  }
+
+  {
+    // 아무것도 안 붙은 상태 — 이유가 달라지므로 안내도 달라져야 한다.
+    __testing.resetChatIdCache();
+    healthTesting.resetCache();
+    const savedToken = config.telegramBotToken;
+    config.telegramBotToken = "";
+    const res = await callHealth();
+    check("설정 전무 → accepting:false", res.payload?.accepting === false);
+    check(
+      "이때는 /start 가 아니라 '설정되지 않았다' 라고 말한다",
+      !/\/start/.test(res.payload?.nextAction || ""),
+      res.payload?.nextAction
+    );
+    config.telegramBotToken = savedToken;
+  }
+
+  {
+    healthTesting.resetCache();
+    const res = await callHealth("POST");
+    check("POST → 405", res.statusCode === 405, `got ${res.statusCode}`);
+  }
+}
+
 /* ------------------------------------------------------------------ */
 
 telegram.close();

@@ -241,6 +241,42 @@ export async function deliverLead(lead) {
   };
 }
 
+/**
+ * "지금 신청이 접수될 수 있는 상태인가" 를 리드를 만들지 않고 확인한다.
+ *
+ * 이게 없으면 확인 방법이 가짜 신청을 한 건 넣어 보는 것뿐이다. 그러면 확인할
+ * 때마다 운영자 휴대폰에 가짜 리드가 쌓이고, 진짜와 섞인다. 텔레그램 chat_id
+ * 조회는 읽기 전용이라 부작용이 없어서 그대로 확인용으로 쓸 수 있다.
+ *
+ * 시트는 사정이 다르다 — 확인하려면 실제로 한 줄을 써야 한다. 그래서 설정
+ * 여부까지만 보고하고 저장이 실제로 되는지는 단언하지 않는다.
+ */
+export async function probeSinks() {
+  const telegram = { name: "telegram", configured: Boolean(config.telegramBotToken), ready: false, detail: "봇 토큰 미설정" };
+
+  if (telegram.configured) {
+    try {
+      await resolveChatId(config.telegramBotToken);
+      telegram.ready = true;
+      telegram.detail = "대화 확인됨 — 알림이 갈 곳이 잡혀 있다";
+    } catch (err) {
+      telegram.detail = String(err?.message || err);
+    }
+  }
+
+  const sheetsConfigured = Boolean(config.sheetsWebhookUrl);
+  const sheets = {
+    name: "sheets",
+    configured: sheetsConfigured,
+    ready: sheetsConfigured,
+    detail: sheetsConfigured
+      ? "URL 설정됨 — 실제 저장 여부는 리드가 들어와야 확인된다"
+      : "URL 미설정",
+  };
+
+  return { telegram, sheets, accepting: telegram.ready || sheets.ready };
+}
+
 export function summarize(results) {
   return results
     .map((r) => `${r.name}=${r.attempted ? (r.ok ? "ok" : `fail(${r.detail})`) : "skip"}`)
