@@ -50,8 +50,25 @@ export const config = {
   /** 알림 채널: slack | discord | telegram | generic | none */
   notifyKind: (process.env.NOTIFY_KIND || "none").toLowerCase(),
   notifyWebhookUrl: process.env.NOTIFY_WEBHOOK_URL || "",
+  /**
+   * 리드 알림을 보내는 봇. **이 봇 주소는 어디에도 공개하지 않는다** —
+   * 공개하면 고객이 이 봇 대화 목록에 들어오고, chat_id 자동 탐색이 그 고객을 고를 수 있다.
+   * 고객 문의는 아래 telegramInquiryBotToken 쪽 봇이 따로 받는다.
+   */
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || "",
+
+  /**
+   * 알림이 도착할 운영자 chat_id. 비워 두면 알림 봇의 최근 대화에서 찾아내지만,
+   * 그 자동 탐색은 대화가 정확히 하나일 때만 동작한다(sinks.mjs 참고).
+   * 문의 중계(telegram-inquiry.mjs)는 이 값이 **반드시** 있어야 한다.
+   */
   telegramChatId: process.env.TELEGRAM_CHAT_ID || "",
+
+  /** 고객 문의를 받는 별도 봇. 이 주소만 페이지에 건다. 비어 있으면 중계가 꺼진다. */
+  telegramInquiryBotToken: process.env.TELEGRAM_INQUIRY_BOT_TOKEN || "",
+
+  /** setWebhook 의 secret_token. 없으면 /api/telegram 은 아예 열리지 않는다. */
+  telegramWebhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || "",
 
   /** /admin 리드 확인 화면 접근 토큰. 비어 있으면 화면 자체를 열지 않는다. */
   adminToken: process.env.ADMIN_TOKEN || "",

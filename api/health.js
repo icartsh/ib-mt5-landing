@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     return res.status(200).json(cached.body);
   }
 
-  const { telegram, sheets, accepting } = await probeSinks();
+  const { telegram, sheets, inquiry, accepting } = await probeSinks();
 
   const body = {
     ok: true,
@@ -37,11 +37,21 @@ export default async function handler(req, res) {
        링크를 뿌리면 유입만 생기고 리드는 한 건도 안 남는다. */
     accepting,
     sinks: {
-      telegram: { configured: telegram.configured, ready: telegram.ready, detail: telegram.detail },
+      telegram: {
+        configured: telegram.configured,
+        ready: telegram.ready,
+        destination: telegram.destination,
+        detail: telegram.detail,
+      },
       sheets: { configured: sheets.configured, ready: sheets.ready, detail: sheets.detail },
+      /* 문의 봇은 리드 접수 경로가 아니라 별도 채널이라 accepting 에 영향을 주지 않는다.
+         대신 여기 ready 가 false 면 페이지의 텔레그램 버튼은 살아 있는데 그 끝은 비어 있다. */
+      inquiry: { configured: inquiry.configured, ready: inquiry.ready, detail: inquiry.detail },
     },
     nextAction: accepting
-      ? "배포 게이트 통과 — utm 링크를 뿌려도 된다."
+      ? telegram.ready && telegram.destination === "auto"
+        ? "접수는 열려 있다. 다만 알림 목적지가 자동 탐색이다 — TELEGRAM_CHAT_ID 를 고정해 두는 것이 안전하다."
+        : "배포 게이트 통과 — utm 링크를 뿌려도 된다."
       : telegram.configured && !telegram.ready
         ? "텔레그램에서 봇에게 /start 를 한 번 보내면 접수가 열린다."
         : "접수 채널(텔레그램 봇 토큰 또는 구글 시트 URL)이 설정되지 않았다.",

@@ -75,12 +75,26 @@ let cachedChatId = "";
  * 사장님이 봇에게 "/start" 한 번 보내면 그게 곧 설정이 된다. chat_id 를 직접
  * 알아내라고 안내하는 순간(@userinfobot 을 찾아라, JSON 을 열어서 숫자를 찾아라)
  * 설정이 거기서 멈춘다. 그래서 토큰 하나만 받고 나머지는 여기서 처리한다.
+ *
+ * ## 대화가 둘 이상이면 보내지 않는다 (IB-10)
+ *
+ * 예전에는 "가장 최근 대화" 를 골랐다. 그 규칙은 봇 주소가 비공개일 때만 안전하다.
+ * 이 봇 주소가 어딘가에 노출돼서 다른 사람이 말을 걸면, 그 사람이 곧 최근 대화가 되고
+ * **다음 리드 알림이 이름과 전체 전화번호를 그대로 달고 그 사람에게 간다.** 구글 시트가
+ * 꺼져 있는 동안 텔레그램은 유일한 기록이라, 운영자는 그 리드가 있었다는 사실조차 모른다.
+ * 화면에는 아무 이상이 없어서 몇 주가 지나도 드러나지 않는다.
+ *
+ * 그래서 후보가 둘 이상이면 고르지 않고 실패한다. 실패하면 그 신청은 접수되지 않고
+ * 신청자는 "지금 접수가 어렵다" 는 안내를 받는다 — 리드 한 건을 잃는 대신 남의 전화번호가
+ * 낯선 사람에게 가는 일은 없다. 잃은 리드는 화면에 보이지만, 새어 나간 번호는 보이지 않는다.
+ *
+ * 이 상태를 영구히 없애는 방법은 TELEGRAM_CHAT_ID 를 직접 박아 두는 것 하나뿐이다.
  */
 async function resolveChatId(token) {
   if (config.telegramChatId) return config.telegramChatId;
   if (cachedChatId) return cachedChatId;
 
-  const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getUpdates?limit=10`, {
+  const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/getUpdates?limit=100`, {
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   // 401/404 는 토큰이 틀렸거나 무효화된 것 — 기다린다고 풀리지 않는다.
@@ -89,18 +103,30 @@ async function resolveChatId(token) {
   const data = await res.json();
   const updates = Array.isArray(data?.result) ? data.result : [];
 
-  // 가장 최근 대화를 쓴다. 여러 사람이 봇에 말을 걸었다면 마지막 사람이 이긴다 —
-  // 그래서 TELEGRAM_CHAT_ID 를 명시하는 쪽이 항상 더 안전하다.
-  for (let i = updates.length - 1; i >= 0; i -= 1) {
-    const chatId = updates[i]?.message?.chat?.id ?? updates[i]?.channel_post?.chat?.id;
-    if (chatId !== undefined && chatId !== null) {
-      cachedChatId = String(chatId);
-      return cachedChatId;
-    }
+  const candidates = [];
+  for (const update of updates) {
+    const chatId = update?.message?.chat?.id ?? update?.channel_post?.chat?.id;
+    if (chatId === undefined || chatId === null) continue;
+    const id = String(chatId);
+    if (!candidates.includes(id)) candidates.push(id);
   }
 
   /* 운영자가 /start 를 보내기 전까지는 몇 번을 다시 눌러도 같은 결과다. */
-  throw configError("chat_id 미확인 — 텔레그램에서 봇에게 /start 를 한 번 보내 주세요.");
+  if (candidates.length === 0) {
+    throw configError("chat_id 미확인 — 텔레그램에서 봇에게 /start 를 한 번 보내 주세요.");
+  }
+
+  if (candidates.length > 1) {
+    throw configError(
+      `알림 봇에 대화가 ${candidates.length}개 있어 목적지를 확정할 수 없습니다 — ` +
+        "리드가 엉뚱한 사람에게 갈 수 있어 보내지 않았습니다. " +
+        "TELEGRAM_CHAT_ID 를 운영자 chat_id 로 직접 지정해 주세요. " +
+        "(고객 문의는 알림 봇이 아니라 문의 전용 봇으로 받아야 합니다.)"
+    );
+  }
+
+  cachedChatId = candidates[0];
+  return cachedChatId;
 }
 
 async function sendTelegram(lead) {
@@ -252,13 +278,23 @@ export async function deliverLead(lead) {
  * 여부까지만 보고하고 저장이 실제로 되는지는 단언하지 않는다.
  */
 export async function probeSinks() {
-  const telegram = { name: "telegram", configured: Boolean(config.telegramBotToken), ready: false, detail: "봇 토큰 미설정" };
+  const telegram = {
+    name: "telegram",
+    configured: Boolean(config.telegramBotToken),
+    ready: false,
+    /* 목적지를 어떻게 정하고 있는지. "auto" 는 지금은 되지만 봇에 다른 대화가 하나라도
+       생기면 그 순간 접수가 멈춘다 — 운영자가 이 차이를 볼 수 있어야 한다. */
+    destination: config.telegramChatId ? "pinned" : "auto",
+    detail: "봇 토큰 미설정",
+  };
 
   if (telegram.configured) {
     try {
       await resolveChatId(config.telegramBotToken);
       telegram.ready = true;
-      telegram.detail = "대화 확인됨 — 알림이 갈 곳이 잡혀 있다";
+      telegram.detail = config.telegramChatId
+        ? "목적지 고정됨 — TELEGRAM_CHAT_ID 로 지정된 곳으로만 간다"
+        : "대화 확인됨(자동 탐색) — 이 봇에 다른 사람이 말을 걸면 접수가 멈춘다. TELEGRAM_CHAT_ID 고정 권장";
     } catch (err) {
       telegram.detail = String(err?.message || err);
     }
@@ -274,7 +310,23 @@ export async function probeSinks() {
       : "URL 미설정",
   };
 
-  return { telegram, sheets, accepting: telegram.ready || sheets.ready };
+  /* 고객 문의 중계(api/telegram.js)는 리드 접수와 무관하므로 accepting 에는 넣지 않는다.
+     다만 세 값 중 하나라도 빠지면 문의가 조용히 사라지므로 상태는 같이 보고한다. */
+  const inquiryConfigured = Boolean(config.telegramInquiryBotToken);
+  const inquiry = {
+    name: "telegram-inquiry",
+    configured: inquiryConfigured,
+    ready: inquiryConfigured && Boolean(config.telegramWebhookSecret) && Boolean(config.telegramChatId),
+    detail: !inquiryConfigured
+      ? "문의 봇 토큰 미설정 — 봇에 온 문의는 아무도 읽지 않는다"
+      : !config.telegramWebhookSecret
+        ? "TELEGRAM_WEBHOOK_SECRET 미설정 — webhook 이 열리지 않는다"
+        : !config.telegramChatId
+          ? "TELEGRAM_CHAT_ID 미설정 — 문의를 전달할 곳이 없다"
+          : "문의가 운영자 대화로 전달된다",
+  };
+
+  return { telegram, sheets, inquiry, accepting: telegram.ready || sheets.ready };
 }
 
 export function summarize(results) {

@@ -25,10 +25,21 @@ window.IB_CONFIG = {
   mimSignupUrl: "https://client.myinvestmentmarkets.com/#/login/LKXAQG",
 
   /**
-   * 텔레그램 문의 채널·봇 주소 (예: "https://t.me/xxxx").
+   * 텔레그램 문의 봇 주소 (예: "https://t.me/xxxx").
    * 비워 두면 텔레그램 버튼 자체가 렌더링되지 않는다. 죽은 링크를 내보내지 않기 위해서다.
+   *
+   * **여기에는 반드시 문의 전용 봇(TELEGRAM_INQUIRY_BOT_TOKEN)만 적는다.**
+   * 리드 알림을 받는 봇(@icartsh_answer_bot)을 적으면 고객이 그 봇에 말을 걸게 되고,
+   * 알림 목적지 자동 탐색이 고객을 고를 수 있어 신청자의 이름과 전체 전화번호가
+   * 낯선 사람에게 갈 수 있다. 서버 쪽에 잠금을 걸어 두었지만(server/sinks.mjs),
+   * 그 잠금이 걸리면 리드 접수 자체가 멈춘다 — 애초에 섞지 않는 것이 맞다.
+   * copy-guard 6-B 가 이 실수를 검사한다.
+   *
+   * 이 봇에 온 문의는 /api/telegram 이 받아서 사장님 대화로 옮긴다. webhook 이
+   * 등록돼 있지 않으면 버튼은 살아 있는데 그 끝은 비어 있다:
+   *   npm run telegram -- status
    */
-  telegramUrl: "https://t.me/icartsh_answer_bot",
+  telegramUrl: "https://t.me/icartsh_ib_bot",
 
   /** 푸터 표기. 사업자 정보 확정 후 채운다. */
   brandName: "",

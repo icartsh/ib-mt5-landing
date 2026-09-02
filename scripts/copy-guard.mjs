@@ -226,6 +226,19 @@ for (const f of pages) {
   if (tg && !/^https:\/\/t\.me\/[A-Za-z0-9_]{4,}$/.test(tg)) {
     fail(`[텔레그램] config.js telegramUrl 이 t.me 주소 형식이 아니다 ("${tg}").`);
   }
+
+  /* 리드 알림을 받는 내부 봇을 고객용 버튼에 걸면, 고객이 그 봇 대화 목록에 들어오고
+     알림 목적지 자동 탐색이 고객을 고를 수 있다 — 신청자의 이름과 전체 전화번호가
+     낯선 사람에게 간다. server/sinks.mjs 에 잠금이 있지만 그건 사고를 막는 대신
+     리드 접수를 통째로 멈춘다. 둘 다 겪지 않으려면 애초에 섞이지 않아야 한다.
+     주소 한 글자 차이라 눈으로는 거의 안 잡힌다(answer_bot ↔ ib_bot). */
+  const ALERT_BOT = "icartsh_answer_bot";
+  if (tg && tg.toLowerCase().includes(ALERT_BOT)) {
+    fail(
+      `[텔레그램] config.js telegramUrl 이 리드 알림 봇(@${ALERT_BOT})을 가리킨다 — ` +
+        `고객용 버튼에는 문의 전용 봇만 건다. docs/telegram-inquiry.md 참고.`
+    );
+  }
 }
 
 /* ---------- 7. vercel.json — 배포가 아예 거절되지 않는가 ---------- */

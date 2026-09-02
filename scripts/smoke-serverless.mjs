@@ -243,6 +243,54 @@ console.log("\n[7] 토큰은 넣었는데 봇에게 /start 를 안 보낸 경우
   check("메시지 발송 시도 없음", sent.length === before, `sent=${sent.length}`);
 }
 
+console.log("\n[7-b] 알림 봇에 대화가 둘 이상 — 남의 전화번호를 낯선 사람에게 보내지 않는다");
+{
+  /* IB-10 에서 실제로 만들 뻔한 상태다. 알림 봇 주소를 페이지에 걸면 고객이 그 봇에
+     말을 걸고, '가장 최근 대화' 규칙은 그 고객을 목적지로 고른다. 그 다음 리드 알림에는
+     신청자의 이름과 전체 전화번호가 그대로 들어 있다(full: true). 시트가 꺼져 있으면
+     그게 유일한 사본이라 운영자는 그런 리드가 있었다는 것조차 모른다.
+
+     그래서 후보가 둘 이상이면 고르지 않고 실패해야 한다. 리드 한 건을 잃는 쪽이
+     남의 번호가 새는 쪽보다 낫다 — 잃은 리드는 보이지만 새어 나간 번호는 안 보인다. */
+  const { __testing } = await import("../server/sinks.mjs");
+  __testing.resetChatIdCache();
+  updatesPayload = {
+    ok: true,
+    result: [
+      { message: { chat: { id: 987654321 } } },   // 운영자
+      { message: { chat: { id: 111222333 } } },   // 페이지 보고 들어온 고객
+    ],
+  };
+
+  const before = sent.length;
+  const res = await call(validLead(), { ip: "10.0.0.71" });
+
+  check("아무에게도 보내지 않는다", sent.length === before, `sent=${sent.length}`);
+  check("접수를 성공으로 답하지 않는다", res.payload?.ok !== true, JSON.stringify(res.payload));
+  check(
+    "재시도 안내를 붙이지 않는다 — 운영자가 고쳐야 풀린다",
+    !/다시 시도/.test(res.payload?.error || ""),
+    res.payload?.error
+  );
+
+  /* 목적지를 고정하면 같은 상황에서도 정상 발송된다 — 이것이 유일한 해소 방법이다. */
+  const { config } = await import("../server/config.mjs");
+  config.telegramChatId = "987654321";
+  __testing.resetChatIdCache();
+  const fixed = await call(validLead(), { ip: "10.0.0.72" });
+  config.telegramChatId = "";
+  __testing.resetChatIdCache();
+
+  check("TELEGRAM_CHAT_ID 를 고정하면 정상 접수된다", fixed.payload?.ok === true, JSON.stringify(fixed.payload));
+  check(
+    "고정된 목적지로만 간다",
+    String(sent[sent.length - 1]?.chat_id) === "987654321",
+    String(sent[sent.length - 1]?.chat_id)
+  );
+
+  updatesPayload = { ok: true, result: [{ message: { chat: { id: 987654321 } } }] };
+}
+
 console.log("\n[8] 구글 시트만 붙은 경우 — 알림 없이 시트 하나로 접수가 성립하는가");
 {
   // 텔레그램을 떼고 시트만 남긴다. 사장님이 알림을 나중에 붙이기로 하면 이 조합이
@@ -372,11 +420,40 @@ console.log("\n[10] /api/health — 리드를 만들지 않고 배포 게이트�
     updatesPayload = { ok: true, result: [{ message: { chat: { id: 987654321 } } }] };
     const res = await callHealth();
     check("/start 이후 accepting:true 로 뒤집힌다", res.payload?.accepting === true);
-    check("게이트 통과 문구", /뿌려도 된다/.test(res.payload?.nextAction || ""), res.payload?.nextAction);
     check(
       "chat_id 같은 비밀값을 내보내지 않는다",
       !JSON.stringify(res.payload).includes("987654321"),
       JSON.stringify(res.payload)
+    );
+
+    /* 자동 탐색으로 통과한 상태다. 접수는 되지만 이 봇에 다른 대화가 하나만 생겨도
+       접수가 멈춘다(위 [7-b]). 통과 여부와 별개로 그 사실이 보여야 손을 쓸 수 있다. */
+    check("목적지가 자동 탐색임을 밝힌다", res.payload?.sinks?.telegram?.destination === "auto",
+      res.payload?.sinks?.telegram?.destination);
+    check("고정을 권한다", /고정/.test(res.payload?.nextAction || ""), res.payload?.nextAction);
+
+    /* 고정하면 같은 자리에서 평범한 통과 문구로 돌아온다. */
+    healthTesting.resetCache();
+    config.telegramChatId = "987654321";
+    const pinned = await callHealth();
+    config.telegramChatId = "";
+    healthTesting.resetCache();
+    check("고정하면 destination:pinned", pinned.payload?.sinks?.telegram?.destination === "pinned");
+    check("고정하면 게이트 통과 문구", /뿌려도 된다/.test(pinned.payload?.nextAction || ""), pinned.payload?.nextAction);
+  }
+
+  {
+    /* 문의 중계 상태도 같이 보고한다. 이게 안 보이면 페이지의 텔레그램 버튼은 살아 있는데
+       그 끝이 비어 있는 상태를 배포 전에 알아챌 방법이 없다. */
+    __testing.resetChatIdCache();
+    healthTesting.resetCache();
+    const res = await callHealth();
+    check("문의 중계 상태를 보고한다", res.payload?.sinks?.inquiry !== undefined);
+    check("문의 봇 미설정이면 ready:false", res.payload?.sinks?.inquiry?.ready === false);
+    check(
+      "이유를 말한다 — 아무도 읽지 않는다",
+      /아무도 읽지 않는다/.test(res.payload?.sinks?.inquiry?.detail || ""),
+      res.payload?.sinks?.inquiry?.detail
     );
   }
 

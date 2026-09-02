@@ -99,14 +99,23 @@ npm run smoke                          # 터미널 3 → data/notifications.log 
 | 항목 | 어디서 | 비고 |
 |---|---|---|
 | 리드 API 주소 | `public/config.js` → `leadEndpoint` | 비우면 페이지가 프리뷰 모드(배너 표시, 접수 안 함)로 동작 |
-| 텔레그램 봇 토큰 | `.env` / Vercel 환경변수 → `TELEGRAM_BOT_TOKEN` | @BotFather 에서 발급. 확정 알림 채널 |
-| 텔레그램 대화 ID | `.env` / Vercel 환경변수 → `TELEGRAM_CHAT_ID` | **비워도 된다.** 봇에게 `/start` 한 번 보내면 자동으로 찾아낸다 |
+| 텔레그램 **알림** 봇 토큰 | `.env` / Vercel 환경변수 → `TELEGRAM_BOT_TOKEN` | 서버 → 사장님. **이 봇 주소는 어디에도 공개하지 않는다** |
+| 텔레그램 대화 ID | `.env` / Vercel 환경변수 → `TELEGRAM_CHAT_ID` | **고정 권장.** 비우면 알림 봇의 최근 대화에서 찾는데, 그 봇에 대화가 둘 이상이면 접수가 멈춘다 |
+| 텔레그램 **문의** 봇 토큰 | `.env` / Vercel 환경변수 → `TELEGRAM_INQUIRY_BOT_TOKEN` | 고객 → 사장님. 페이지의 "텔레그램 문의" 버튼이 향하는 봇 → `docs/telegram-inquiry.md` |
+| 문의 webhook 비밀값 | `.env` / Vercel 환경변수 → `TELEGRAM_WEBHOOK_SECRET` | 없으면 `/api/telegram` 이 503 으로 닫혀 있다. `openssl rand -hex 24` |
 | 구글 시트 | `.env` → `SHEETS_WEBHOOK_URL` | 선택. `docs/google-sheets-webhook.gs` 참고 |
 | 추가 알림 채널 | `.env` → `NOTIFY_KIND` | `slack` \| `discord` \| `generic` \| `none`. 기록으로 치지 않는다 |
 | 리드 확인 화면 | `.env` → `ADMIN_TOKEN` | 로컬 전용. 비우면 `/admin` 이 404 |
 | 교차 도메인 호출 | `.env` → `ALLOWED_ORIGINS` | 정적 호스팅 + 별도 API 서버 구성일 때 필요 |
 
-상담 연결은 **전화 콜백 한 가지**다 (사장님 확정, 2026-09-02). 카카오 경로는 코드에 없다.
+상담 연결은 **전화 콜백**과 **텔레그램 문의 봇** 두 가지다. 카카오 경로는 코드에 없다.
+
+> **텔레그램 봇은 두 개이고 절대 하나로 합치면 안 된다.**
+> 알림 봇(`@icartsh_answer_bot`)은 서버가 사장님에게 리드를 보내는 내부 채널이고,
+> 문의 봇(`@icartsh_ib_bot`)은 고객이 우리에게 말을 거는 공개 채널이다.
+> 알림 봇 주소를 페이지에 걸면 고객이 그 봇 대화 목록에 들어오고, 목적지 자동 탐색이
+> 그 고객을 골라 **신청자의 이름과 전체 전화번호가 낯선 사람에게 갈 수 있다.**
+> 켜는 순서와 고장 진단은 `docs/telegram-inquiry.md`.
 
 ## Vercel 배포
 

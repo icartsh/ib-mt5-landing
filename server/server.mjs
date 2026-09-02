@@ -8,6 +8,7 @@ import { config, ROOT } from "./config.mjs";
 import { saveLead, readLeads } from "./store.mjs";
 import { buildLead, isHoneypotHit, validateLead } from "./lead-core.mjs";
 import { deliverLead, summarize } from "./sinks.mjs";
+import { handleUpdate } from "./telegram-inquiry.mjs";
 
 const PUBLIC_DIR = join(ROOT, "public");
 
@@ -104,6 +105,36 @@ async function readBody(req, limitBytes = 32 * 1024) {
 /* -------------------------------------------------------------------- */
 /* 핸들러                                                                */
 /* -------------------------------------------------------------------- */
+
+/**
+ * 고객 문의 봇 webhook. 판단 로직은 telegram-inquiry.mjs 가 갖고 있고,
+ * 여기서는 "진짜 텔레그램이 보낸 것인가" 만 확인한다. api/telegram.js 와 같은 규칙이다 —
+ * 비밀값이 없으면 열지 않고, 처리에 실패해도 200 으로 답한다(재전송 폭주 방지).
+ */
+async function telegramWebhook(req, res) {
+  if (!config.telegramWebhookSecret) {
+    return sendJson(res, 503, { ok: false, error: "webhook secret unset" });
+  }
+  if (req.headers["x-telegram-bot-api-secret-token"] !== config.telegramWebhookSecret) {
+    return sendJson(res, 401, { ok: false, error: "unauthorized" });
+  }
+
+  let update;
+  try {
+    update = JSON.parse(await readBody(req, 1024 * 1024));
+  } catch {
+    return sendJson(res, 200, { ok: true, action: "bad_body" });
+  }
+
+  try {
+    const result = await handleUpdate(update);
+    console.log(`[telegram] ${result.action}${result.detail ? ` ${result.detail}` : ""}`);
+    return sendJson(res, 200, { ok: true, action: result.action });
+  } catch (err) {
+    console.error("[telegram] 처리 중 오류", err);
+    return sendJson(res, 200, { ok: true, action: "error" });
+  }
+}
 
 async function handleLead(req, res) {
   const cors = corsHeaders(req);
@@ -273,6 +304,14 @@ const server = createServer(async (req, res) => {
         return sendJson(res, 405, { ok: false, error: "method not allowed" });
       }
       return await handleLead(req, res);
+    }
+    /* 고객 문의 봇 webhook. 로컬에서도 같은 경로로 받게 해 두면 ngrok 등으로 붙여
+       실제 봇으로 손검증할 수 있다. 서버리스 배포에서는 api/telegram.js 가 같은 일을 한다. */
+    if (url.pathname === "/api/telegram") {
+      if (req.method !== "POST") {
+        return sendJson(res, 405, { ok: false, error: "method not allowed" });
+      }
+      return await telegramWebhook(req, res);
     }
     if (url.pathname === "/api/health") {
       return sendJson(res, 200, {
