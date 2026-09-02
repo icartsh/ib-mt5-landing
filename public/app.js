@@ -228,7 +228,12 @@
       })
       .then(function (r) {
         if (!r.ok || !r.body || !r.body.ok) {
-          throw new Error((r.body && r.body.error) || "저장에 실패했습니다.");
+          /* 서버가 문구를 줬으면 그걸 그대로 쓴다. 서버는 이 상황이 재시도로
+             풀리는지 아닌지를 알고 그에 맞춰 말한다 — 여기서 "잠시 후 다시
+             시도해 주세요" 를 덧붙이면 그 판단을 덮어써서 거짓말이 된다. */
+          var err = new Error((r.body && r.body.error) || "저장에 실패했습니다.");
+          err.fromServer = !!(r.body && r.body.error);
+          throw err;
         }
         form.hidden = true;
         donePanel.hidden = false;
@@ -237,8 +242,9 @@
       })
       .catch(function (err) {
         statusEl.className = "form-status is-error";
-        statusEl.textContent =
-          "신청 접수에 실패했습니다. 잠시 후 다시 시도해 주세요. (" + err.message + ")";
+        statusEl.textContent = err.fromServer
+          ? err.message
+          : "신청 접수에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.";
       })
       .then(function () {
         submitting = false;

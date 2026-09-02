@@ -286,8 +286,15 @@ console.log("\n[9] 환경변수를 하나도 안 넣고 배포한 경우 — 갓
   check("HTTP 503 — 조용히 접수된 척하지 않는다", res.statusCode === 503, `got ${res.statusCode}`);
   check("ok:false", res.payload?.ok === false);
   check(
-    "'설정이 완료되지 않았습니다' — 재시도 안내가 아니다",
+    "'설정이 완료되지 않았습니다' 라고 말한다",
     /설정이 완료되지 않았습니다/.test(res.payload?.error || ""),
+    res.payload?.error
+  );
+  /* 문구에 '다시 시도' 가 들어가면 검사는 통과하면서 사용자는 재시도를 반복한다.
+     여기서 부재를 직접 못 박아야 그 조합이 다시 생기지 않는다. */
+  check(
+    "재시도 안내를 붙이지 않는다 — 눌러도 결과가 같다",
+    !/다시 시도/.test(res.payload?.error || ""),
     res.payload?.error
   );
   check("바깥으로 나간 요청 없음", sent.length === before, `sent=${sent.length}`);

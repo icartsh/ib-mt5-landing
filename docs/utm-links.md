@@ -22,16 +22,39 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 4. 링크를 새로 만들면 **이 문서에 한 줄 추가**한다. 문서에 없는 링크는 뿌리지 않는다.
 5. 단축 URL(비틀리·네이버 단축)을 써도 **원본에 utm 이 붙어 있어야** 한다. 단축이 utm 을 대신하지 않는다.
 
-**베이스 URL** — 아래 표의 `{BASE}` 자리에 확정된 랜딩 주소를 넣는다.
+**베이스 URL** — 1절의 링크는 아래 주소로 이미 완성돼 있다. 그대로 복사해서 쓴다.
+
+```
+https://ib-mt5-landing.vercel.app
+```
 
 | 상태 | 주소 | 신청 접수 |
 |---|---|---|
-| 지금 (검토용 프리뷰) | `https://icartsh.github.io/ib-mt5-landing` | **안 됨** — 페이지 상단에 프리뷰 배너가 뜬다 |
-| 배포 확정 후 | `https://____.vercel.app` (또는 자체 도메인) | 됨 |
+| 라이브 (배포됨) | `https://ib-mt5-landing.vercel.app` | 아래 **배포 게이트** 참조 |
+| 이전 프리뷰 | `https://icartsh.github.io/ib-mt5-landing` | **안 됨** — 프리뷰 배너가 뜬다. 이제 쓰지 않는다 |
+| 자체 도메인 이전 시 | 미정 | 옮길 때 이 문서를 한 번 더 일괄 교체 |
 
-> **프리뷰 주소로는 링크를 뿌리지 않는다.** 신청이 접수되지 않아서, 유입은 생기는데
-> 리드는 한 건도 안 남는다. 배포 주소가 나오면 이 문서의 `{BASE}` 를 일괄 교체하고
-> 그때부터 배포한다. 자체 도메인으로 옮길 때도 같은 방식으로 한 번 더 교체한다.
+> Vercel 이 자동으로 만드는 **배포별 주소**(`ib-mt5-landing-<해시>-….vercel.app`)는
+> 접근 보호가 걸려 있어 외부인이 열면 로그인 화면이 뜬다. 링크로 뿌릴 주소는
+> 위의 `ib-mt5-landing.vercel.app` **하나뿐**이다.
+
+### 배포 게이트 — 링크를 뿌리기 전에 반드시 통과할 것
+
+페이지는 떠 있지만, **접수 채널(텔레그램/시트)이 붙기 전까지 신청은 접수되지 않는다.**
+이 상태로 링크를 뿌리면 유입은 생기는데 리드는 한 건도 안 남는다 — 나중에 복구가 안 된다.
+
+아래 명령이 `{"ok":true,...}` 를 돌려줄 때부터 배포를 시작한다.
+
+```bash
+curl -s -X POST https://ib-mt5-landing.vercel.app/api/lead \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"게이트확인","contact":"010-0000-0000","experience":"입문",
+       "source":"기타","consent":true,
+       "utm":{"utm_source":"internal","utm_medium":"test","utm_campaign":"qa"}}'
+```
+
+- `{"ok":true,"id":"…"}` → **통과.** 링크 배포 시작. (이 확인 리드 1건은 알림으로 도착하니 무시하면 된다.)
+- `접수 설정이 완료되지 않았습니다` → **아직.** 접수 채널이 안 붙었다. 뿌리지 않는다.
 
 ---
 
@@ -41,10 +64,10 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 비용 구조 글 (본문 하단 CTA) | `post_cost_structure` | `{BASE}/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_cost_structure` |
-| 증거금 글 (본문 하단 CTA) | `post_margin` | `{BASE}/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_margin` |
-| 마이크로 계약 글 (본문 하단 CTA) | `post_micro` | `{BASE}/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_micro` |
-| 블로그 프로필/위젯 상시 링크 | `profile` | `{BASE}/?utm_source=naver_blog&utm_medium=profile&utm_campaign=always_on&utm_content=profile` |
+| 비용 구조 글 (본문 하단 CTA) | `post_cost_structure` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_cost_structure` |
+| 증거금 글 (본문 하단 CTA) | `post_margin` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_margin` |
+| 마이크로 계약 글 (본문 하단 CTA) | `post_micro` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_micro` |
+| 블로그 프로필/위젯 상시 링크 | `profile` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=profile&utm_campaign=always_on&utm_content=profile` |
 
 > 글이 늘어나면 `utm_content` 만 새로 만든다. `utm_source`·`utm_medium` 은 고정.
 
@@ -52,19 +75,19 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 프로필 링크(bio) — 상시 | `bio` | `{BASE}/?utm_source=instagram&utm_medium=bio&utm_campaign=always_on&utm_content=bio` |
-| 스토리 스와이프업/링크 스티커 | `story_{날짜}` | `{BASE}/?utm_source=instagram&utm_medium=story&utm_campaign=cost_guide&utm_content=story_20260910` |
-| 릴스 캡션 링크 | `reels_{소재명}` | `{BASE}/?utm_source=instagram&utm_medium=reels&utm_campaign=cost_guide&utm_content=reels_margin` |
-| 피드 게시물 캡션 | `feed_{소재명}` | `{BASE}/?utm_source=instagram&utm_medium=feed&utm_campaign=cost_guide&utm_content=feed_cost` |
+| 프로필 링크(bio) — 상시 | `bio` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=bio&utm_campaign=always_on&utm_content=bio` |
+| 스토리 스와이프업/링크 스티커 | `story_{날짜}` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=story&utm_campaign=cost_guide&utm_content=story_20260910` |
+| 릴스 캡션 링크 | `reels_{소재명}` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=reels&utm_campaign=cost_guide&utm_content=reels_margin` |
+| 피드 게시물 캡션 | `feed_{소재명}` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=feed&utm_campaign=cost_guide&utm_content=feed_cost` |
 
 ### 유튜브
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 영상 설명란 (일반 영상) | `desc_{영상슬러그}` | `{BASE}/?utm_source=youtube&utm_medium=description&utm_campaign=cost_guide&utm_content=desc_cost_structure` |
-| 쇼츠 설명란 | `shorts_{영상슬러그}` | `{BASE}/?utm_source=youtube&utm_medium=shorts&utm_campaign=cost_guide&utm_content=shorts_micro` |
-| 고정 댓글 | `pinned_{영상슬러그}` | `{BASE}/?utm_source=youtube&utm_medium=pinned_comment&utm_campaign=cost_guide&utm_content=pinned_cost_structure` |
-| 채널 배너/정보 링크 — 상시 | `channel` | `{BASE}/?utm_source=youtube&utm_medium=channel&utm_campaign=always_on&utm_content=channel` |
+| 영상 설명란 (일반 영상) | `desc_{영상슬러그}` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=description&utm_campaign=cost_guide&utm_content=desc_cost_structure` |
+| 쇼츠 설명란 | `shorts_{영상슬러그}` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=shorts&utm_campaign=cost_guide&utm_content=shorts_micro` |
+| 고정 댓글 | `pinned_{영상슬러그}` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=pinned_comment&utm_campaign=cost_guide&utm_content=pinned_cost_structure` |
+| 채널 배너/정보 링크 — 상시 | `channel` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=channel&utm_campaign=always_on&utm_content=channel` |
 
 ### 카카오톡 (공유 경로)
 
@@ -76,15 +99,15 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 개인 대화로 공유 | `dm` | `{BASE}/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=dm` |
-| 단톡방에 공유 | `group` | `{BASE}/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=group` |
+| 개인 대화로 공유 | `dm` | `https://ib-mt5-landing.vercel.app/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=dm` |
+| 단톡방에 공유 | `group` | `https://ib-mt5-landing.vercel.app/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=group` |
 
 ### 네이버 지식iN / 카페
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 지식iN 답변 내 링크 | `kin_{주제}` | `{BASE}/?utm_source=naver_kin&utm_medium=answer&utm_campaign=cost_guide&utm_content=kin_margin` |
-| 카페 글 | `cafe_{주제}` | `{BASE}/?utm_source=naver_cafe&utm_medium=post&utm_campaign=cost_guide&utm_content=cafe_cost` |
+| 지식iN 답변 내 링크 | `kin_{주제}` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_kin&utm_medium=answer&utm_campaign=cost_guide&utm_content=kin_margin` |
+| 카페 글 | `cafe_{주제}` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_cafe&utm_medium=post&utm_campaign=cost_guide&utm_content=cafe_cost` |
 
 > 지식iN·카페는 플랫폼 정책상 링크·홍보가 제재 대상이 될 수 있다.
 > 뿌리기 전에 각 플랫폼 운영정책을 확인하고, 광고 표현 가이드라인(IB-6)을 함께 본다.
@@ -93,8 +116,8 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 지인 소개·오프라인 (QR 포함) | `referral` | `{BASE}/?utm_source=referral&utm_medium=direct&utm_campaign=always_on&utm_content=referral` |
-| 내부 테스트 | `internal_test` | `{BASE}/?utm_source=internal&utm_medium=test&utm_campaign=qa&utm_content=internal_test` |
+| 지인 소개·오프라인 (QR 포함) | `referral` | `https://ib-mt5-landing.vercel.app/?utm_source=referral&utm_medium=direct&utm_campaign=always_on&utm_content=referral` |
+| 내부 테스트 | `internal_test` | `https://ib-mt5-landing.vercel.app/?utm_source=internal&utm_medium=test&utm_campaign=qa&utm_content=internal_test` |
 
 > **유료 광고 링크는 이 문서에 아직 넣지 않는다.**
 > 광고 표현 가이드라인(IB-6)에 따라 유료 광고 집행 전 사용자 확인과 법률 검토가 선행돼야 한다.
@@ -132,7 +155,8 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 
 ## 4. 링크 만들 때 쓰는 체크리스트
 
-- [ ] `{BASE}` 를 확정 주소로 바꿨는가
+- [ ] 위의 **배포 게이트**를 통과했는가 (접수가 `ok:true` 인가)
+- [ ] 주소가 `https://ib-mt5-landing.vercel.app` 인가 (배포별 해시 주소가 아닌가)
 - [ ] `utm_source` / `utm_medium` 이 2절 사전에 있는 값인가
 - [ ] `utm_content` 가 이 소재 전용으로 새로 만든 값인가
 - [ ] 이 문서 표에 한 줄 추가했는가
