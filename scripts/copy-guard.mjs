@@ -227,16 +227,21 @@ for (const f of pages) {
     fail(`[텔레그램] config.js telegramUrl 이 t.me 주소 형식이 아니다 ("${tg}").`);
   }
 
-  /* 리드 알림을 받는 내부 봇을 고객용 버튼에 걸면, 고객이 그 봇 대화 목록에 들어오고
-     알림 목적지 자동 탐색이 고객을 고를 수 있다 — 신청자의 이름과 전체 전화번호가
-     낯선 사람에게 간다. server/sinks.mjs 에 잠금이 있지만 그건 사고를 막는 대신
-     리드 접수를 통째로 멈춘다. 둘 다 겪지 않으려면 애초에 섞이지 않아야 한다.
+  /* 리드 알림 봇을 고객용 버튼에 거는 것 자체는 사고가 아니다. 사고는 그 봇의 알림
+     목적지가 **자동 탐색**일 때 일어난다 — 고객이 봇 대화 목록에 들어오고, 자동 탐색이
+     그 고객을 고르면 신청자의 이름과 전체 전화번호가 낯선 사람에게 간다.
+
+     그래서 금지가 아니라 조건으로 건다: 알림 봇을 공개할 거면 TELEGRAM_CHAT_ID 가
+     반드시 박혀 있어야 한다. 목적지가 고정되면 그 봇에 누가 말을 걸든 알림이 새지
+     않는다. 같은 판정이 server/config.mjs 의 resolveInquiryBot() 에도 있다.
+
      주소 한 글자 차이라 눈으로는 거의 안 잡힌다(answer_bot ↔ ib_bot). */
   const ALERT_BOT = "icartsh_answer_bot";
-  if (tg && tg.toLowerCase().includes(ALERT_BOT)) {
+  if (tg && tg.toLowerCase().includes(ALERT_BOT) && !process.env.TELEGRAM_CHAT_ID) {
     fail(
-      `[텔레그램] config.js telegramUrl 이 리드 알림 봇(@${ALERT_BOT})을 가리킨다 — ` +
-        `고객용 버튼에는 문의 전용 봇만 건다. docs/telegram-inquiry.md 참고.`
+      `[텔레그램] config.js telegramUrl 이 리드 알림 봇(@${ALERT_BOT})을 가리키는데 ` +
+        `TELEGRAM_CHAT_ID 가 비어 있다 — 알림 목적지가 자동 탐색이라 리드가 고객에게 갈 수 있다. ` +
+        `chat_id 를 고정하거나, 문의 전용 봇 주소를 쓴다. docs/telegram-inquiry.md 참고.`
     );
   }
 }

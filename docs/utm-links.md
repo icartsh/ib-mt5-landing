@@ -101,6 +101,27 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 | 고정 댓글 | `pinned_{영상슬러그}` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=pinned_comment&utm_campaign=cost_guide&utm_content=pinned_cost_structure` |
 | 채널 배너/정보 링크 — 상시 | `channel` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=channel&utm_campaign=always_on&utm_content=channel` |
 
+### 숏폼 4채널 (IB-17 확정 규칙)
+
+한 편을 4채널에 같이 올릴 때는 `utm_content`를 같게 쓰고, `utm_source`와 `utm_medium`으로 채널을 구분한다.
+
+| 채널 | `utm_source` | `utm_medium` | 복사해서 쓰는 1편 링크 |
+|---|---|---|---|
+| YouTube Shorts | `youtube` | `shorts` | `https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=shorts&utm_campaign=shortform_organic&utm_content=sf_001` |
+| Instagram Reels | `instagram` | `reels` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=reels&utm_campaign=shortform_organic&utm_content=sf_001` |
+| TikTok | `tiktok` | `short_video` | `https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001` |
+| Threads | `threads` | `short_video` | `https://ib-mt5-landing.vercel.app/?utm_source=threads&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001` |
+
+**영상 번호 규칙**
+
+- `utm_campaign`은 숏폼 자연 유입 전체에서 `shortform_organic`으로 고정한다.
+- `utm_content`는 `sf_` + 3자리 편 번호다. 첫 편 `sf_001`, 다음 편 `sf_002` 순서로 올린다.
+- 번호는 촬영·제작 목록에서 한 번만 발급하며, 삭제하거나 미게시한 편의 번호도 다시 쓰지 않는다.
+- 같은 원본 영상을 4채널에 교차 게시하면 같은 편 번호를 쓴다. 플랫폼용으로 자막·길이만 조정해도 같다.
+- 내용과 메시지가 다른 새 편집본은 다음 번호를 발급한다. 999편 다음은 `sf_1000`으로 쓴다.
+
+기존 블로그(`naver_blog/post/post_*`)와 카페(`naver_cafe/post/cafe_*`)는 source와 content 접두어가 모두 달라 충돌하지 않는다. 기존 YouTube Shorts와 Instagram Reels의 source·medium도 그대로 유지한다.
+
 ### 카카오톡 (공유 경로)
 
 **상담 채널로서의 카카오는 없다** (사장님 확정, 2026-09-02 — 상담은 전화 콜백 한 가지).
@@ -138,11 +159,11 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 
 ## 2. 값 사전 (허용 값만 사용)
 
-**utm_source** · `naver_blog` `instagram` `youtube` `kakao` `naver_kin` `naver_cafe` `referral` `internal`
+**utm_source** · `naver_blog` `instagram` `youtube` `tiktok` `threads` `kakao` `naver_kin` `naver_cafe` `referral` `internal`
 
-**utm_medium** · `post` `profile` `bio` `story` `reels` `feed` `description` `shorts` `pinned_comment` `channel` `openchat` `channel_message` `answer` `direct` `test`
+**utm_medium** · `post` `profile` `bio` `story` `reels` `feed` `description` `shorts` `short_video` `pinned_comment` `channel` `openchat` `channel_message` `answer` `direct` `test`
 
-**utm_campaign** · `cost_guide` (비용 구조 주제) · `always_on` (상시 링크) · `qa` (내부 테스트)
+**utm_campaign** · `cost_guide` (비용 구조 주제) · `shortform_organic` (숏폼 자연 유입) · `always_on` (상시 링크) · `qa` (내부 테스트)
 
 ---
 

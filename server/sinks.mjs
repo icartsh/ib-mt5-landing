@@ -13,7 +13,7 @@
  *   - 구글 시트  : 진짜 표. 정렬·검색된다.
  *   - 텔레그램   : 운영자 휴대폰에 남는 1:1 대화. 건수가 적은 초기에는 이것으로 충분하다.
  */
-import { config } from "./config.mjs";
+import { config, resolveInquiryBot } from "./config.mjs";
 import { buildNotifyText } from "./lead-core.mjs";
 
 const TIMEOUT_MS = 8000;
@@ -90,6 +90,16 @@ let cachedChatId = "";
  *
  * 이 상태를 영구히 없애는 방법은 TELEGRAM_CHAT_ID 를 직접 박아 두는 것 하나뿐이다.
  */
+/** 읽기 전용 텔레그램 호출. `result` 만 돌려준다. */
+async function telegramApi(token, method) {
+  const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/${method}`, {
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  });
+  if (!res.ok) throw httpError(res.status, method);
+  const data = await res.json();
+  return data?.result;
+}
+
 async function resolveChatId(token) {
   if (config.telegramChatId) return config.telegramChatId;
   if (cachedChatId) return cachedChatId;
@@ -121,7 +131,7 @@ async function resolveChatId(token) {
       `알림 봇에 대화가 ${candidates.length}개 있어 목적지를 확정할 수 없습니다 — ` +
         "리드가 엉뚱한 사람에게 갈 수 있어 보내지 않았습니다. " +
         "TELEGRAM_CHAT_ID 를 운영자 chat_id 로 직접 지정해 주세요. " +
-        "(고객 문의는 알림 봇이 아니라 문의 전용 봇으로 받아야 합니다.)"
+        "(고정하고 나면 이 봇을 고객 문의용으로 같이 써도 안전합니다 — config.mjs 참고.)"
     );
   }
 
@@ -312,19 +322,40 @@ export async function probeSinks() {
 
   /* 고객 문의 중계(api/telegram.js)는 리드 접수와 무관하므로 accepting 에는 넣지 않는다.
      다만 세 값 중 하나라도 빠지면 문의가 조용히 사라지므로 상태는 같이 보고한다. */
-  const inquiryConfigured = Boolean(config.telegramInquiryBotToken);
+  const { token: inquiryToken, shared } = resolveInquiryBot();
+  const inquiryConfigured = Boolean(inquiryToken);
   const inquiry = {
     name: "telegram-inquiry",
     configured: inquiryConfigured,
     ready: inquiryConfigured && Boolean(config.telegramWebhookSecret) && Boolean(config.telegramChatId),
+    /* 전용 봇인지 알림 봇을 같이 쓰는지. 운영자가 페이지 버튼 주소를 맞출 때 필요하다. */
+    shared,
+    /* 실제로 문의를 읽고 있는 봇의 @이름. 봇 username 은 공개 정보라 내보내도 된다 —
+       오히려 이게 없으면 페이지 버튼이 "우리가 읽지 않는 봇" 을 가리켜도 알 방법이 없다. */
+    username: "",
     detail: !inquiryConfigured
-      ? "문의 봇 토큰 미설정 — 봇에 온 문의는 아무도 읽지 않는다"
+      ? config.telegramBotToken
+        ? "TELEGRAM_CHAT_ID 미설정 — 알림 봇을 같이 쓰려면 목적지가 고정돼 있어야 한다"
+        : "문의 봇 토큰 미설정 — 봇에 온 문의는 아무도 읽지 않는다"
       : !config.telegramWebhookSecret
         ? "TELEGRAM_WEBHOOK_SECRET 미설정 — webhook 이 열리지 않는다"
         : !config.telegramChatId
           ? "TELEGRAM_CHAT_ID 미설정 — 문의를 전달할 곳이 없다"
-          : "문의가 운영자 대화로 전달된다",
+          : shared
+            ? "문의가 운영자 대화로 전달된다 (알림 봇과 같은 봇을 쓴다)"
+            : "문의가 운영자 대화로 전달된다 (전용 문의 봇)",
   };
+
+  if (inquiryConfigured) {
+    /* getMe 는 읽기 전용이라 부작용이 없다. 실패해도 문의 중계 자체는 멀쩡하므로
+       이름만 비워 두고 ready 는 건드리지 않는다. */
+    try {
+      const me = await telegramApi(inquiryToken, "getMe");
+      inquiry.username = me?.username ? `@${me.username}` : "";
+    } catch {
+      /* 이름을 못 읽은 것뿐이다. 상태 판정에는 쓰지 않는다. */
+    }
+  }
 
   return { telegram, sheets, inquiry, accepting: telegram.ready || sheets.ready };
 }

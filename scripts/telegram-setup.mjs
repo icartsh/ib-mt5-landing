@@ -19,10 +19,12 @@
 import { readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
-import { config, ROOT } from "../server/config.mjs";
+import { config, ROOT, resolveInquiryBot } from "../server/config.mjs";
 
 const API_BASE = process.env.TELEGRAM_API_BASE || "https://api.telegram.org";
-const token = config.telegramInquiryBotToken;
+/* 전용 문의 봇이 없으면 알림 봇을 같이 쓴다(chat_id 가 고정돼 있을 때만). 판정 기준은
+   server/config.mjs 의 resolveInquiryBot() 에 적어 두었다. */
+const { token, shared: sharedInquiryBot } = resolveInquiryBot();
 const secret = config.telegramWebhookSecret;
 
 function die(message) {
@@ -147,34 +149,65 @@ async function doctor() {
 
   /* --- 3. 문의 봇: 고객 → 사장님 -------------------------------------- */
   console.log("\n3) 문의 봇 (페이지의 '텔레그램 문의' 버튼이 향하는 곳)");
+  /* 경로를 열어 둔 것은 테스트에서 다른 config.js 를 물리기 위해서다. 운영에서는 기본값. */
+  const pageConfigPath = process.env.PAGE_CONFIG_PATH || join(ROOT, "public", "config.js");
   const pageBot = (
-    readFileSync(join(ROOT, "public", "config.js"), "utf8").match(/telegramUrl:\s*"[^"]*t\.me\/([A-Za-z0-9_]+)/) || []
+    readFileSync(pageConfigPath, "utf8").match(/telegramUrl:\s*"[^"]*t\.me\/([A-Za-z0-9_]+)/) || []
   )[1] || "";
-  console.log(`   페이지가 가리키는 봇: ${pageBot ? `@${pageBot}` : "(비어 있음 — 버튼이 렌더링되지 않는다)"}`);
+  console.log(
+    `   페이지가 가리키는 봇: ${pageBot ? `@${pageBot} (config.js 에 직접 적혀 있음)` : "(비어 있음 — /api/health 에 물어서 정한다)"}`
+  );
 
   let inquiryBotUsername = "";
   if (!token) {
-    console.log("   ✗ TELEGRAM_INQUIRY_BOT_TOKEN 없음 — 고객이 봇에 남긴 문의를 아무도 읽지 못한다.");
+    /* 토큰이 없는 경우는 두 가지고, 남은 할 일이 서로 다르다. 알림 봇 토큰조차 없으면
+       봇부터 붙여야 하고, 알림 봇은 있는데 chat_id 가 비어 있으면 같이 쓰기 위한
+       조건(목적지 고정)만 채우면 된다 — 새 토큰을 받으러 갈 필요가 없다. */
+    console.log("   ✗ 문의를 읽을 봇이 없다 — 고객이 봇에 남긴 문의를 아무도 읽지 못한다.");
     console.log("     고객 화면에는 정상 전송으로 보이므로, 답을 기다리다 그냥 떠난다.");
-    remaining.push(`@BotFather → /mybots → ${pageBot ? `@${pageBot}` : "문의 봇"} → API Token 을 TELEGRAM_INQUIRY_BOT_TOKEN 에 넣는다.`);
+    if (config.telegramBotToken && !config.telegramChatId) {
+      console.log("     알림 봇은 있다. TELEGRAM_CHAT_ID 만 고정하면 그 봇을 문의용으로 같이 쓴다.");
+      remaining.push("TELEGRAM_CHAT_ID 를 고정한다 (2번). 그러면 알림 봇이 문의도 받는다.");
+    } else {
+      remaining.push(`@BotFather → /mybots → ${pageBot ? `@${pageBot}` : "문의 봇"} → API Token 을 TELEGRAM_INQUIRY_BOT_TOKEN 에 넣는다.`);
+    }
   } else {
     const me = await ask(token, "getMe");
     if (!me.ok) {
       console.log(`   ✗ 토큰이 동작하지 않는다 — ${me.error}`);
-      remaining.push("TELEGRAM_INQUIRY_BOT_TOKEN 값을 다시 확인한다.");
+      remaining.push(sharedInquiryBot ? "TELEGRAM_BOT_TOKEN 값을 다시 확인한다." : "TELEGRAM_INQUIRY_BOT_TOKEN 값을 다시 확인한다.");
     } else {
       inquiryBotUsername = me.result.username || "";
-      console.log(`   ✓ 토큰이 가리키는 봇: @${inquiryBotUsername}`);
+      console.log(`   ✓ 문의를 읽는 봇: @${inquiryBotUsername}${sharedInquiryBot ? " (알림 봇과 같은 봇)" : " (전용 문의 봇)"}`);
 
-      if (alertBotUsername && inquiryBotUsername.toLowerCase() === alertBotUsername.toLowerCase()) {
-        console.log("   ✗ 알림 봇과 같은 봇이다 — 절대 안 된다.");
-        console.log("     고객이 알림 봇 대화 목록에 들어오고, 다음 리드 알림이 신청자의 이름과");
-        console.log("     전체 전화번호를 달고 그 고객에게 갈 수 있다.");
-        remaining.push("문의 봇을 알림 봇과 다른 봇으로 바꾼다 (docs/telegram-inquiry.md).");
+      /* 같은 봇인지는 어느 환경변수에 넣었는지가 아니라 **실제 봇 이름**으로 판정한다.
+         전용 변수에 알림 봇 토큰을 넣어 두면 변수만 봐서는 분리된 것처럼 보인다. */
+      const sameBot =
+        alertBotUsername && inquiryBotUsername.toLowerCase() === alertBotUsername.toLowerCase();
+
+      if (sameBot) {
+        /* 같은 봇을 쓰는 것 자체는 사고가 아니다. 사고는 목적지 자동 탐색과 겹칠 때만
+           일어난다 — 고객이 봇 대화 목록에 들어오고 자동 탐색이 그 고객을 고르면
+           신청자의 이름과 전체 전화번호가 낯선 사람에게 간다. chat_id 가 박혀 있으면
+           목적지가 하나로 고정돼 그 경로가 막힌다(server/config.mjs). */
+        if (config.telegramChatId) {
+          console.log("     알림 봇과 같은 봇이지만 목적지가 고정돼 있어 리드가 샐 수 없다.");
+          console.log("     운영자 대화 하나에 리드 알림과 고객 문의가 같이 들어온다.");
+        } else {
+          console.log("   ✗ 알림 봇과 같은 봇인데 목적지가 자동 탐색이다 — 이 조합은 안 된다.");
+          console.log("     고객이 알림 봇 대화 목록에 들어오고, 다음 리드 알림이 신청자의 이름과");
+          console.log("     전체 전화번호를 달고 그 고객에게 갈 수 있다.");
+          remaining.push("TELEGRAM_CHAT_ID 를 고정하거나, 문의를 다른 봇으로 받는다 (docs/telegram-inquiry.md).");
+        }
       }
       if (pageBot && inquiryBotUsername.toLowerCase() !== pageBot.toLowerCase()) {
-        console.log(`   ✗ 페이지는 @${pageBot} 을 가리키는데 토큰은 @${inquiryBotUsername} 이다 — 문의가 도착하지 않는다.`);
-        remaining.push(`public/config.js 의 telegramUrl 과 토큰의 봇을 일치시킨다.`);
+        console.log(`   ✗ 페이지는 @${pageBot} 을 가리키는데 문의를 읽는 봇은 @${inquiryBotUsername} 이다 — 문의가 도착하지 않는다.`);
+        remaining.push(`public/config.js 의 telegramUrl 을 https://t.me/${inquiryBotUsername} 로 맞춘다.`);
+      }
+      if (!pageBot) {
+        /* 비어 있는 것이 기본값이다 — links.js 가 /api/health 에게 물어서 이 봇을 건다.
+           손으로 맞출 것이 없으므로 남은 할 일도 아니다. */
+        console.log(`   ✓ 페이지는 주소를 적어 두지 않고 서버에 물어본다 — @${inquiryBotUsername} 이 걸린다.`);
       }
     }
   }

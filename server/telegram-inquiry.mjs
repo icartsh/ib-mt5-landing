@@ -16,19 +16,25 @@
  *
  * 이 모듈이 그 큐를 운영자 대화로 밀어 넣고, 운영자의 답장을 고객에게 되돌린다.
  *
- * ## 알림 봇과 문의 봇을 반드시 분리하는 이유
+ * ## 봇이 하나여도 되는 조건
  *
- * sinks.mjs 의 `resolveChatId` 는 TELEGRAM_CHAT_ID 가 없으면 봇에게 온 최근 대화에서
- * 목적지를 찾는다. 그 봇 주소를 랜딩페이지에 걸어 두면 **고객이 그 대화 목록에 들어온다** —
- * 리드 알림(이름·전체 전화번호)이 생판 남에게 갈 수 있고, 구글 시트가 꺼져 있는 지금
- * 텔레그램이 유일한 기록이라 운영자는 그 리드를 영영 못 본다. 그래서
+ * 봇을 둘로 나눠야 하는 상황이 실제로 있다. sinks.mjs 의 `resolveChatId` 는
+ * TELEGRAM_CHAT_ID 가 없으면 봇에게 온 최근 대화에서 목적지를 찾는데, 그 봇 주소를
+ * 랜딩페이지에 걸면 **고객이 그 대화 목록에 들어온다** — 리드 알림(이름·전체 전화번호)이
+ * 생판 남에게 갈 수 있고, 구글 시트가 꺼져 있는 지금 텔레그램이 유일한 기록이라
+ * 운영자는 그 리드를 영영 못 본다.
  *
- *   TELEGRAM_BOT_TOKEN          = 알림 전용. 주소를 어디에도 공개하지 않는다.
- *   TELEGRAM_INQUIRY_BOT_TOKEN  = 고객 문의 전용. 이 주소만 페이지에 건다.
+ * 다만 그 사고는 **자동 탐색이 켜져 있을 때만** 성립한다. TELEGRAM_CHAT_ID 가 박혀
+ * 있으면 목적지는 그 값 하나이고, 그 봇에 누가 말을 걸든 알림이 새지 않는다. 그리고
+ * 이 중계는 어차피 TELEGRAM_CHAT_ID 를 필수로 요구한다 — 중계가 도는 조건 자체가
+ * 사고 조건을 배제한다. 그래서 토큰을 하나만 가진 운영자도 문의를 받을 수 있다.
+ * 판정은 config.mjs 의 `resolveInquiryBot()` 한 곳에 모아 두었다.
  *
- * 로 나눈다. sinks.mjs 쪽에도 "대화가 둘 이상이면 보내지 않는다" 는 잠금을 걸어 두었다.
+ * 봇을 같이 쓰면 운영자 대화 하나에 리드 알림과 고객 문의가 섞여 들어온다. 운영자가
+ * 리드 알림에 답장하면 표식이 없으므로 "전달할 대상을 찾지 못했습니다" 로 돌려보낸다
+ * (아래 `reply_no_target`) — 고객에게 잘못 나가지는 않는다.
  */
-import { config } from "./config.mjs";
+import { config, resolveInquiryBot } from "./config.mjs";
 
 const TIMEOUT_MS = 8000;
 
@@ -223,7 +229,7 @@ function floodCheck(chatId) {
  * @returns {{action: string, detail?: string}}
  */
 export async function handleUpdate(update) {
-  const token = config.telegramInquiryBotToken;
+  const { token } = resolveInquiryBot();
   const ownerChatId = config.telegramChatId;
 
   if (!token) return { action: "skipped", detail: "문의 봇 토큰 미설정" };

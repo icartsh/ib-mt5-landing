@@ -85,3 +85,35 @@ export const config = {
     max: Number(process.env.RATE_MAX || 5),
   },
 };
+
+/**
+ * 문의 중계가 실제로 읽을 봇을 정한다. 토큰을 하나만 가진 상태에서도 문의가
+ * 사라지지 않게 하는 것이 목적이다.
+ *
+ * 봇을 둘로 나누는 이유는 하나뿐이다 — 알림 봇 주소가 공개되면 고객이 그 봇의
+ * 대화 목록에 들어오고, TELEGRAM_CHAT_ID 가 비어 있을 때의 자동 탐색이 그 고객을
+ * 목적지로 고를 수 있다. 리드(이름·전화번호)가 생판 남에게 가는 사고다.
+ *
+ * 그런데 그 사고는 **자동 탐색이 켜져 있을 때만** 성립한다. TELEGRAM_CHAT_ID 가
+ * 박혀 있으면 목적지는 그 값 하나로 고정되고, 그 봇에 누가 말을 걸든 알림이 새지
+ * 않는다. 그리고 문의 중계는 어차피 TELEGRAM_CHAT_ID 를 필수로 요구한다
+ * (telegram-inquiry.mjs) — 즉 중계가 도는 조건 자체가 사고 조건을 배제한다.
+ *
+ * 그래서 규칙은 이렇게 된다:
+ *
+ *   전용 문의 봇 토큰이 있다  → 그것을 쓴다 (분리 유지, 가장 깨끗함).
+ *   없고 chat_id 가 박혀 있다 → 알림 봇을 같이 쓴다 (봇 하나로 충분).
+ *   없고 chat_id 도 비어 있다 → 켜지 않는다 (여기서만 사고가 가능하다).
+ *
+ * 세 번째 경우에 조용히 켜지 않는 것이 중요하다. 켜 두면 알림은 남에게 가고
+ * 운영자는 그 리드를 영영 못 본다.
+ */
+export function resolveInquiryBot() {
+  if (config.telegramInquiryBotToken) {
+    return { token: config.telegramInquiryBotToken, shared: false };
+  }
+  if (config.telegramBotToken && config.telegramChatId) {
+    return { token: config.telegramBotToken, shared: true };
+  }
+  return { token: "", shared: false };
+}

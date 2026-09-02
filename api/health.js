@@ -17,17 +17,16 @@ import { probeSinks } from "../server/sinks.mjs";
 const CACHE_MS = 5000;
 let cached = { at: 0, body: null };
 
-export default async function handler(req, res) {
-  res.setHeader("Cache-Control", "no-store");
-
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    return res.status(405).json({ ok: false, error: "method not allowed" });
-  }
-
+/**
+ * 응답 본문을 만든다. 로컬 서버(server/server.mjs)도 이걸 그대로 쓴다.
+ *
+ * 두 곳이 각자 만들면 반드시 갈라진다. 그리고 갈라지는 순간 곤란해지는 것은
+ * public/links.js 다 — 페이지의 텔레그램 버튼이 이 응답의 `sinks.inquiry` 를 보고
+ * 자기 주소를 정하기 때문에, 로컬에서 멀쩡하던 버튼이 배포에서만 사라지거나 그 반대가 된다.
+ */
+export async function buildHealthBody() {
   const now = Date.now();
-  if (cached.body && now - cached.at < CACHE_MS) {
-    return res.status(200).json(cached.body);
-  }
+  if (cached.body && now - cached.at < CACHE_MS) return cached.body;
 
   const { telegram, sheets, inquiry, accepting } = await probeSinks();
 
@@ -46,7 +45,15 @@ export default async function handler(req, res) {
       sheets: { configured: sheets.configured, ready: sheets.ready, detail: sheets.detail },
       /* 문의 봇은 리드 접수 경로가 아니라 별도 채널이라 accepting 에 영향을 주지 않는다.
          대신 여기 ready 가 false 면 페이지의 텔레그램 버튼은 살아 있는데 그 끝은 비어 있다. */
-      inquiry: { configured: inquiry.configured, ready: inquiry.ready, detail: inquiry.detail },
+      /* username 은 봇의 공개 이름이라 내보내도 된다. 오히려 이게 없으면
+         public/config.js 의 버튼이 "우리가 읽지 않는 봇" 을 가리켜도 알 수 없다. */
+      inquiry: {
+        configured: inquiry.configured,
+        ready: inquiry.ready,
+        shared: inquiry.shared,
+        username: inquiry.username,
+        detail: inquiry.detail,
+      },
     },
     nextAction: accepting
       ? telegram.ready && telegram.destination === "auto"
@@ -58,7 +65,17 @@ export default async function handler(req, res) {
   };
 
   cached = { at: now, body };
-  return res.status(200).json(body);
+  return body;
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return res.status(405).json({ ok: false, error: "method not allowed" });
+  }
+
+  return res.status(200).json(await buildHealthBody());
 }
 
 /** 검사에서 상태를 바꿔 가며 확인할 수 있게 캐시를 비우는 통로. */

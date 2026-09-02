@@ -13,6 +13,7 @@
  */
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+import { writeFileSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -115,19 +116,47 @@ ownerStarted = true;
   check("START 확인을 통과한다", out.includes("도착할 수 있다"));
 }
 
-console.log("\ndoctor — 두 봇이 같은 봇 (리드 유출 경로)");
+console.log("\ndoctor — 전용 토큰 없이 알림 봇을 같이 쓴다 (chat_id 고정됨)");
 {
-  const { code, out } = await runDoctor({ ...READY, TELEGRAM_INQUIRY_BOT_TOKEN: "alert-token" });
+  /* 토큰을 하나만 가진 상태. 목적지가 박혀 있으므로 리드가 샐 경로가 없다 —
+     새 봇을 받아 오라고 시키면 안 하려도 되는 일을 시키는 것이 된다. */
+  const { code, out } = await runDoctor({ ...READY, TELEGRAM_INQUIRY_BOT_TOKEN: "" });
+  check("남은 것 없음으로 끝난다", code === 0, `exit=${code}`);
+  check("알림 봇으로 문의를 읽는다고 말한다", out.includes("@icartsh_answer_bot"));
+  check("리드가 샐 수 없다고 밝힌다", out.includes("샐 수 없다"));
+  check("새 봇 토큰을 받아 오라고 하지 않는다", !out.includes("TELEGRAM_INQUIRY_BOT_TOKEN 에 넣는다"));
+}
+
+console.log("\ndoctor — 알림 봇을 같이 쓰는데 chat_id 가 비어 있다 (리드 유출 경로)");
+{
+  /* 여기서만 사고가 성립한다. 목적지가 자동 탐색이라 고객이 그 자리를 차지할 수 있다. */
+  const { code, out } = await runDoctor({
+    ...READY,
+    TELEGRAM_INQUIRY_BOT_TOKEN: "alert-token",
+    TELEGRAM_CHAT_ID: "",
+  });
   check("실패로 끝난다", code === 1, `exit=${code}`);
-  check("같은 봇이라고 말한다", out.includes("알림 봇과 같은 봇"));
+  check("같은 봇인데 목적지가 자동이라고 말한다", out.includes("같은 봇인데 목적지가 자동 탐색"));
   check("전화번호가 샐 수 있다고 경고한다", out.includes("전체 전화번호"));
 }
 
-console.log("\ndoctor — 페이지가 가리키는 봇과 토큰의 봇이 다름");
+console.log("\ndoctor — 페이지에 주소를 직접 적어 뒀는데 토큰의 봇과 다름");
 {
-  const { code, out } = await runDoctor({ ...READY, TELEGRAM_INQUIRY_BOT_TOKEN: "other-token" });
-  check("실패로 끝난다", code === 1, `exit=${code}`);
-  check("불일치를 짚는다", out.includes("문의가 도착하지 않는다"));
+  /* config.js 에 주소를 손으로 적으면 서버에 묻지 않는다. 그래서 그 주소가 실제로
+     읽는 봇과 어긋나면 문의가 조용히 사라진다 — doctor 가 잡아야 하는 자리다. */
+  const pinned = join(ROOT, "scripts", ".doctor-page-config.tmp.js");
+  writeFileSync(pinned, 'window.IB_CONFIG = { telegramUrl: "https://t.me/icartsh_ib_bot" };\n');
+  try {
+    const { code, out } = await runDoctor({
+      ...READY,
+      TELEGRAM_INQUIRY_BOT_TOKEN: "other-token",
+      PAGE_CONFIG_PATH: pinned,
+    });
+    check("실패로 끝난다", code === 1, `exit=${code}`);
+    check("불일치를 짚는다", out.includes("문의가 도착하지 않는다"));
+  } finally {
+    rmSync(pinned, { force: true });
+  }
 }
 
 console.log("\ndoctor — 사장님이 문의 봇에 START 를 안 누름");

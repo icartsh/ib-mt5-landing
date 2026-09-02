@@ -10,8 +10,24 @@
    *
    * 마크업 쪽 계약:
    *   data-link="mim"      → config.mimSignupUrl. 없으면 요소를 지운다.
-   *   data-link="telegram" → config.telegramUrl.  없으면 요소를 지운다.
+   *   data-link="telegram" → config.telegramUrl. 비어 있으면 **서버에 물어본다**.
    *   data-fallback        → 위 둘이 모두 지워졌을 때만 보이는 대체 CTA(우리 상담 폼).
+   *
+   * ## 텔레그램 주소만 서버에 물어보는 이유
+   *
+   * 이 버튼의 진짜 실패는 "링크가 없는 것" 이 아니라 **읽는 사람이 없는 봇을 가리키는
+   * 것**이다. 봇에 온 메시지는 아무도 꺼내지 않으면 24시간 뒤 사라지는데, 고객 화면에는
+   * 대화창이 열리고 전송도 정상으로 보인다. 고객은 답을 기다리고 우리는 문의가 왔다는
+   * 사실조차 모른다.
+   *
+   * 어느 봇을 실제로 읽고 있는지는 서버의 환경변수가 정한다(server/config.mjs 의
+   * resolveInquiryBot). 그 값을 여기에 손으로 옮겨 적으면 언젠가 반드시 어긋나고,
+   * 어긋난 순간 화면에는 아무 이상이 없다. 그래서 주소를 적어 두는 대신
+   * `/api/health` 가 알려주는 `sinks.inquiry` 를 그대로 따른다 — 읽을 준비가 된
+   * 봇이 있으면 그 봇을 걸고, 없으면 버튼을 지운다. 손으로 맞출 것이 없어진다.
+   *
+   * config.telegramUrl 에 주소를 적어 두면 그쪽이 이긴다(서버에 묻지 않는다).
+   * 서버가 없는 환경에서 페이지만 열어 보는 경우를 위해 남겨 둔 문이다.
    *
    * 링크에는 utm 을 그대로 실어 보낸다. 어느 글에서 온 사람이 브로커까지 갔는지
    * 알 수 없으면 콘텐츠 중에 뭘 더 쓸지 판단할 근거가 사라진다.
@@ -106,33 +122,102 @@
 
   var live = { mim: false, telegram: false };
 
-  [].slice.call(document.querySelectorAll("[data-link]")).forEach(function (el) {
-    var kind = el.getAttribute("data-link");
-    var href = HREF[kind];
+  function wire(kind, href) {
+    var wired = false;
+    [].slice.call(document.querySelectorAll('[data-link="' + kind + '"]')).forEach(function (el) {
+      if (!href) {
+        el.remove();
+        return;
+      }
+      el.setAttribute("href", kind === "telegram" ? telegramHref(href) : withUtm(href));
+      el.setAttribute("target", "_blank");
+      /* 외부 탭에서 우리 페이지 객체에 접근하지 못하게 한다 (탭내빙 방지) */
+      el.setAttribute("rel", "noopener noreferrer");
+      wired = true;
+    });
+    live[kind] = wired;
+  }
 
-    if (!href) {
-      el.remove();
-      return;
+  /* 대체 CTA 와 안내 문구는 텔레그램 답이 온 뒤에 한 번만 정리한다. 먼저 정리해 버리면
+     서버가 봇을 알려줬을 때 이미 지워진 뒤라 되돌릴 수 없다. */
+  function settle() {
+    /* 외부 경로가 하나도 살아 있지 않을 때만 대체 CTA 를 보여준다. */
+    var anyLive = live.mim || live.telegram;
+    [].slice.call(document.querySelectorAll("[data-fallback]")).forEach(function (el) {
+      if (anyLive) el.remove();
+      else el.hidden = false;
+    });
+
+    /* 링크가 하나라도 살아 있으면, 그 옆의 "다른 경로 안내" 문구는 중복이라 지운다. */
+    if (live.mim) {
+      [].slice.call(document.querySelectorAll("[data-when-no-mim]")).forEach(function (el) {
+        el.remove();
+      });
+    }
+  }
+
+  wire("mim", HREF.mim);
+
+  if (HREF.telegram) {
+    /* 주소가 적혀 있으면 그대로 쓴다 — 서버가 없는 환경에서도 페이지가 돈다. */
+    wire("telegram", HREF.telegram);
+    settle();
+  } else {
+    /* 답이 오기 전까지는 버튼을 감춰 둔다. 눌렀는데 주소가 없는 상태를 만들지 않기 위해서다.
+       (요소를 지우지는 않는다 — 답이 오면 되살려야 한다.) */
+    [].slice.call(document.querySelectorAll('[data-link="telegram"]')).forEach(function (el) {
+      el.hidden = true;
+    });
+
+    askServer(function (username) {
+      [].slice.call(document.querySelectorAll('[data-link="telegram"]')).forEach(function (el) {
+        el.hidden = false;
+      });
+      wire("telegram", username ? "https://t.me/" + username : "");
+      settle();
+    });
+  }
+
+  /**
+   * `/api/health` 에게 "지금 문의를 실제로 읽고 있는 봇" 을 묻는다.
+   *
+   * 못 물어봤거나(오프라인·404) 준비가 안 된 상태면 빈 값으로 답한다 — 그러면 버튼이
+   * 사라지고 대체 CTA(우리 상담 폼)가 나온다. 확실하지 않을 때 버튼을 남기는 쪽이
+   * 훨씬 나쁘다. 그 경우 문의는 조용히 사라지고 우리는 그 사실을 모른다.
+   */
+  function askServer(done) {
+    var settled = false;
+    function finish(username) {
+      if (settled) return;
+      settled = true;
+      done(username);
     }
 
-    el.setAttribute("href", kind === "telegram" ? telegramHref(href) : withUtm(href));
-    el.setAttribute("target", "_blank");
-    /* 외부 탭에서 우리 페이지 객체에 접근하지 못하게 한다 (탭내빙 방지) */
-    el.setAttribute("rel", "noopener noreferrer");
-    live[kind] = true;
-  });
+    /* 서버가 늦게 답하면 사람은 이미 스크롤을 내려가 버린다. 3초를 넘기면 없는 것으로 본다. */
+    var timer = setTimeout(function () {
+      finish("");
+    }, 3000);
 
-  /* 외부 경로가 하나도 살아 있지 않을 때만 대체 CTA 를 보여준다. */
-  var anyLive = live.mim || live.telegram;
-  [].slice.call(document.querySelectorAll("[data-fallback]")).forEach(function (el) {
-    if (anyLive) el.remove();
-    else el.hidden = false;
-  });
-
-  /* 링크가 하나라도 살아 있으면, 그 옆의 "다른 경로 안내" 문구는 중복이라 지운다. */
-  if (live.mim) {
-    [].slice.call(document.querySelectorAll("[data-when-no-mim]")).forEach(function (el) {
-      el.remove();
-    });
+    try {
+      fetch("/api/health", { headers: { Accept: "application/json" } })
+        .then(function (res) {
+          return res.ok ? res.json() : null;
+        })
+        .then(function (body) {
+          clearTimeout(timer);
+          var inquiry = (body && body.sinks && body.sinks.inquiry) || null;
+          /* ready 가 아니면 토큰·webhook·목적지 중 뭔가가 빠진 상태다. 봇 주소는 알아도
+             그 끝이 비어 있으므로 거는 것이 아니라 지우는 것이 맞다. */
+          if (!inquiry || !inquiry.ready) return finish("");
+          finish(String(inquiry.username || "").replace(/^@/, ""));
+        })
+        .catch(function () {
+          clearTimeout(timer);
+          finish("");
+        });
+    } catch (e) {
+      clearTimeout(timer);
+      finish("");
+    }
   }
 })();

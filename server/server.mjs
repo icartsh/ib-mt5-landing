@@ -9,6 +9,7 @@ import { saveLead, readLeads } from "./store.mjs";
 import { buildLead, isHoneypotHit, validateLead } from "./lead-core.mjs";
 import { deliverLead, summarize } from "./sinks.mjs";
 import { handleUpdate } from "./telegram-inquiry.mjs";
+import { buildHealthBody } from "../api/health.js";
 
 const PUBLIC_DIR = join(ROOT, "public");
 
@@ -314,11 +315,10 @@ const server = createServer(async (req, res) => {
       return await telegramWebhook(req, res);
     }
     if (url.pathname === "/api/health") {
-      return sendJson(res, 200, {
-        ok: true,
-        notifyKind: config.notifyKind,
-        sheetsConfigured: Boolean(config.sheetsWebhookUrl),
-      });
+      /* 배포본과 같은 본문을 돌려준다. 페이지의 텔레그램 버튼이 이 응답을 보고 자기
+         주소를 정하므로(public/links.js), 여기서만 모양이 다르면 로컬에서 확인한 것이
+         배포에서 그대로 재현되지 않는다. */
+      return sendJson(res, 200, await buildHealthBody());
     }
     if (url.pathname === "/admin" || url.pathname === "/admin/leads") {
       return await handleAdmin(req, res, url);

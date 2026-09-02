@@ -57,6 +57,13 @@ const telegram = createServer((req, res) => {
     return res.end(JSON.stringify(updatesPayload));
   }
 
+  /* 문의 봇의 @이름을 /api/health 가 보고한다. 페이지 버튼이 "우리가 읽지 않는 봇" 을
+     가리키고 있는지 배포 뒤에 확인할 수 있는 유일한 값이라 여기서도 흉내 낸다. */
+  if (url.pathname.endsWith("/getMe")) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end('{"ok":true,"result":{"username":"icartsh_answer_bot"}}');
+  }
+
   if (url.pathname.endsWith("/sendMessage")) {
     const chunks = [];
     req.on("data", (c) => chunks.push(c));
@@ -450,11 +457,60 @@ console.log("\n[10] /api/health — 리드를 만들지 않고 배포 게이트�
     const res = await callHealth();
     check("문의 중계 상태를 보고한다", res.payload?.sinks?.inquiry !== undefined);
     check("문의 봇 미설정이면 ready:false", res.payload?.sinks?.inquiry?.ready === false);
+
+    /* 여기는 알림 봇 토큰은 있는데 chat_id 가 비어 있는 상태다. 남은 할 일이
+       "새 봇 토큰을 받아 온다" 가 아니라 "목적지를 고정한다" 라는 것이 보여야 한다 —
+       전자는 @BotFather 를 열어야 하고 후자는 이미 가진 값으로 끝난다. */
     check(
-      "이유를 말한다 — 아무도 읽지 않는다",
-      /아무도 읽지 않는다/.test(res.payload?.sinks?.inquiry?.detail || ""),
+      "이유를 말한다 — chat_id 를 고정하면 알림 봇을 같이 쓸 수 있다",
+      /TELEGRAM_CHAT_ID/.test(res.payload?.sinks?.inquiry?.detail || ""),
       res.payload?.sinks?.inquiry?.detail
     );
+
+    /* 토큰이 하나도 없을 때만 "아무도 읽지 않는다" 다. 이 문구는 새 봇을 받아 와야
+       한다는 뜻이라, 위 상태와 섞이면 안 하려도 되는 일을 하게 만든다. */
+    healthTesting.resetCache();
+    const savedAlertToken = config.telegramBotToken;
+    config.telegramBotToken = "";
+    const noBot = await callHealth();
+    config.telegramBotToken = savedAlertToken;
+    healthTesting.resetCache();
+    check(
+      "봇이 아예 없을 때만 '아무도 읽지 않는다'",
+      /아무도 읽지 않는다/.test(noBot.payload?.sinks?.inquiry?.detail || ""),
+      noBot.payload?.sinks?.inquiry?.detail
+    );
+  }
+
+  {
+    /* 전용 문의 봇 토큰이 없어도, chat_id 가 박혀 있으면 알림 봇을 같이 써서 문의를 받는다.
+       봇을 나누는 이유는 목적지 자동 탐색이 고객을 고르는 사고 하나뿐인데, 목적지가
+       고정되면 그 사고가 성립하지 않는다(server/config.mjs 의 resolveInquiryBot). */
+    __testing.resetChatIdCache();
+    healthTesting.resetCache();
+    const savedChatId = config.telegramChatId;
+    const savedSecret = config.telegramWebhookSecret;
+    config.telegramChatId = "987654321";
+    config.telegramWebhookSecret = "s3cret";
+
+    const shared = await callHealth();
+
+    config.telegramChatId = savedChatId;
+    config.telegramWebhookSecret = savedSecret;
+    healthTesting.resetCache();
+
+    check("전용 토큰이 없어도 문의 중계가 켜진다", shared.payload?.sinks?.inquiry?.configured === true,
+      shared.payload?.sinks?.inquiry?.detail);
+    check("ready:true", shared.payload?.sinks?.inquiry?.ready === true,
+      shared.payload?.sinks?.inquiry?.detail);
+    check("알림 봇을 같이 쓰고 있음을 밝힌다", shared.payload?.sinks?.inquiry?.shared === true);
+
+    /* 봇 username 은 공개 정보다. 이 값이 없으면 페이지 버튼을 어느 주소로 맞춰야
+       하는지 배포 뒤에 알 방법이 없다 — 잘못 맞추면 문의가 조용히 사라진다. */
+    check("문의를 읽는 봇의 @이름을 알려준다", shared.payload?.sinks?.inquiry?.username === "@icartsh_answer_bot",
+      shared.payload?.sinks?.inquiry?.username);
+    check("username 을 주면서도 토큰은 내보내지 않는다",
+      !JSON.stringify(shared.payload).includes(config.telegramBotToken || "###"));
   }
 
   {
