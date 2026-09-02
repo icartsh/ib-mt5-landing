@@ -146,6 +146,59 @@ export function greetingText() {
   ].join("\n");
 }
 
+/**
+ * 고객의 문의를 운영자에게 올린 뒤 고객 화면에 남기는 접수 확인.
+ *
+ * 이게 없으면 고객은 질문을 보내고 **아무 응답도 받지 못한다**. 봇 대화창은 원래
+ * 조용하므로 고객 입장에서는 "이 봇 죽었구나" 와 구별되지 않는다. 실제로 사장님이
+ * 봇에 말을 걸었을 때 겪은 것이 정확히 이 침묵이다.
+ */
+export function receiptText() {
+  return "문의가 담당자에게 전달되었습니다. 확인하는 대로 이 창으로 답변드립니다.";
+}
+
+/**
+ * 운영자가 자기 봇에 말을 걸었을 때 돌려주는 안내.
+ *
+ * ## 왜 필요한가
+ *
+ * 운영자 대화는 **문의 수신함**이다. 그래서 아래 handleUpdate 는 운영자가 보낸 메시지를
+ * 고객 문의로 취급하지 않는다 — 여기까지는 옳다. 그런데 답장이 아닌 메시지는 그냥
+ * `ignored` 로 버려서, 운영자 화면에는 아무 일도 일어나지 않았다. 봇이 고장 난 것과
+ * 정상 동작이 화면상 완전히 같아진다. 운영자는 자기 봇을 시험할 방법이 없었다.
+ *
+ * 그리고 이건 단순한 불편이 아니다 — 운영자는 이 창에 그냥 답을 써 두고 고객에게
+ * 갔다고 생각할 수 있다. 그 글은 아무 데도 가지 않는다. 그래서 "여기 쓴 글은 고객에게
+ * 가지 않는다" 를 명시적으로 알린다.
+ *
+ * @param {string} text 운영자가 보낸 원문. `/start` 류 명령이면 전체 안내를 준다.
+ * @param {string} botUsername 자기 자신의 @이름. 비어 있으면 링크 줄을 뺀다.
+ */
+export function ownerHelpText(text, botUsername = "") {
+  const asked = /^\/(start|help|status|ping)\b/.test((text || "").trim());
+  if (!asked) {
+    return [
+      "이 창은 고객 문의가 올라오는 수신함입니다. 여기에 그냥 쓰신 글은 고객에게 가지 않습니다.",
+      "고객에게 답하시려면 '💬 새 텔레그램 문의' 카드에 답장(reply)해 주세요.",
+      "/help 로 전체 안내를 볼 수 있습니다.",
+    ].join("\n");
+  }
+
+  const link = botUsername ? `https://t.me/${botUsername.replace(/^@/, "")}` : "";
+  return [
+    "✅ 문의 봇이 정상 동작 중입니다. 이 대화가 문의 수신함입니다.",
+    "",
+    "• 고객이 봇에 남긴 문의는 '💬 새 텔레그램 문의' 카드로 여기 올라옵니다.",
+    "• 그 카드에 답장(reply)하면 내용이 그대로 고객에게 전달됩니다.",
+    "• 카드에 답장하지 않고 이 창에 쓰신 글은 고객에게 가지 않습니다.",
+    "",
+    "고객 입장에서 시험해 보시려면 다른 텔레그램 계정으로 봇을 여세요.",
+    "이 계정은 운영자 계정이라 고객 흐름을 탈 수 없습니다 — 문의가 자기 자신에게",
+    "전달되는 것을 막기 위해 일부러 갈라 두었습니다.",
+    ...(link ? ["", `고객용 링크: ${link}`] : []),
+  ].join("\n");
+}
+
 /* -------------------------------------------------------------------- */
 /* 텔레그램 호출                                                         */
 /* -------------------------------------------------------------------- */
@@ -185,6 +238,22 @@ function sendText(token, chatId, text) {
   });
 }
 
+/**
+ * 자기 @이름. 봇마다 고정값이라 인스턴스 수명 동안 한 번만 물어본다.
+ * 못 읽어도 안내문에서 링크 한 줄이 빠질 뿐이므로 오류를 위로 던지지 않는다.
+ */
+let cachedUsername = null;
+async function botUsername(token) {
+  if (cachedUsername !== null) return cachedUsername;
+  try {
+    const me = await callBot(token, "getMe", {});
+    cachedUsername = me?.username ? `@${me.username}` : "";
+  } catch {
+    cachedUsername = "";
+  }
+  return cachedUsername;
+}
+
 /* -------------------------------------------------------------------- */
 /* 폭주 방지                                                             */
 /* -------------------------------------------------------------------- */
@@ -198,6 +267,7 @@ const FLOOD_WINDOW_MS = 60_000;
 const FLOOD_MAX = 15;
 const floodHits = new Map();
 
+/** @returns {{verdict: "pass"|"last"|"drop", count: number}} count 는 이번 창 안에서 몇 번째인지. */
 function floodCheck(chatId) {
   const now = Date.now();
   const key = String(chatId);
@@ -211,8 +281,8 @@ function floodCheck(chatId) {
     }
   }
 
-  if (recent.length < FLOOD_MAX) return "pass";
-  return recent.length === FLOOD_MAX ? "last" : "drop";
+  const verdict = recent.length < FLOOD_MAX ? "pass" : recent.length === FLOOD_MAX ? "last" : "drop";
+  return { verdict, count: recent.length };
 }
 
 /* -------------------------------------------------------------------- */
@@ -253,7 +323,13 @@ export async function handleUpdate(update) {
   if (isOwner) {
     const target = extractCustomerChatId(message?.reply_to_message?.text || "");
     if (!target) {
-      if (!message.reply_to_message) return { action: "ignored", detail: "운영자 일반 메시지" };
+      if (!message.reply_to_message) {
+        /* 답장이 아닌 운영자 메시지. 예전에는 여기서 조용히 버렸는데, 그러면 운영자
+           화면에서 "봇이 죽음" 과 "정상" 이 구별되지 않는다. 반드시 무언가 돌려준다. */
+        const username = await botUsername(token);
+        await sendText(token, ownerChatId, ownerHelpText(text, username)).catch(() => {});
+        return { action: "owner_help" };
+      }
       await sendText(
         token,
         ownerChatId,
@@ -286,7 +362,7 @@ export async function handleUpdate(update) {
   }
 
   /* ---- 고객이 보낸 경우 → 운영자에게 올린다 ---- */
-  const flood = floodCheck(chatId);
+  const { verdict: flood, count: floodCount } = floodCheck(chatId);
   if (flood === "drop") return { action: "throttled", detail: `#c${chatId}` };
 
   const payload = startPayload(text);
@@ -319,6 +395,14 @@ export async function handleUpdate(update) {
     return { action: "greeted", detail: payload ? `유입=${payload}` : "" };
   }
 
+  /* 접수 확인은 창(1분) 안에서 첫 건에만 보낸다. 매 줄마다 되돌려 주면 고객이
+     여러 줄로 나눠 쓸 때 대화가 봇 응답으로 도배된다. 반대로 아예 안 보내면
+     고객은 침묵만 본다 — 첫 건 한 번이 그 사이다. */
+  if (floodCount === 1) {
+    await sendText(token, chatId, receiptText()).catch(() => {});
+    return { action: "forwarded_with_receipt", detail: `#c${chatId}` };
+  }
+
   return { action: "forwarded", detail: `#c${chatId}` };
 }
 
@@ -326,4 +410,5 @@ export const __testing = {
   markerLine,
   defuseLookalikes,
   resetFlood: () => floodHits.clear(),
+  resetUsername: () => { cachedUsername = null; },
 };

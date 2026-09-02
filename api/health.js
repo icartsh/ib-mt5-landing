@@ -52,6 +52,9 @@ export async function buildHealthBody() {
         ready: inquiry.ready,
         shared: inquiry.shared,
         username: inquiry.username,
+        /* 텔레그램이 실제로 우리 수신구로 배달하고 있는지. 설정만 맞고 등록이 빠진
+           상태를 이 값 없이는 밖에서 구별할 수 없었다. 비밀값은 들어 있지 않다. */
+        webhook: inquiry.webhook,
         detail: inquiry.detail,
       },
     },

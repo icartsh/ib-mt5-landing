@@ -352,6 +352,8 @@ export async function probeSinks() {
     /* 실제로 문의를 읽고 있는 봇의 @이름. 봇 username 은 공개 정보라 내보내도 된다 —
        오히려 이게 없으면 페이지 버튼이 "우리가 읽지 않는 봇" 을 가리켜도 알 방법이 없다. */
     username: "",
+    /* 아래에서 getWebhookInfo 로 채운다. 토큰이 없으면 물어볼 것도 없으므로 null 로 둔다. */
+    webhook: null,
     detail: !inquiryConfigured
       ? config.telegramBotToken
         ? "TELEGRAM_CHAT_ID 미설정 — 알림 봇을 같이 쓰려면 목적지가 고정돼 있어야 한다"
@@ -373,6 +375,46 @@ export async function probeSinks() {
       inquiry.username = me?.username ? `@${me.username}` : "";
     } catch {
       /* 이름을 못 읽은 것뿐이다. 상태 판정에는 쓰지 않는다. */
+    }
+
+    /**
+     * webhook 이 실제로 붙어 있는지.
+     *
+     * 위의 `ready` 는 **우리 쪽 설정이 갖춰졌는가** 만 본다 — 토큰·비밀값·목적지가
+     * 다 있으면 true 다. 그런데 setWebhook 등록이 빠졌거나 텔레그램이 우리 주소로
+     * 배달하다 실패하고 있으면, 설정은 완벽한데 문의는 한 건도 안 들어온다.
+     * 그 상태가 `ready: true` 로 보였기 때문에 "봇이 응답을 안 한다" 를 만났을 때
+     * 원인을 좁힐 수가 없었다. 등록 여부와 마지막 배달 오류를 같이 답한다.
+     *
+     * 비밀값은 내보내지 않는다 — 등록된 주소는 우리 공개 엔드포인트이고,
+     * secret_token 은 getWebhookInfo 가 애초에 돌려주지 않는다.
+     */
+    try {
+      const info = await telegramApi(inquiryToken, "getWebhookInfo");
+      const url = typeof info?.url === "string" ? info.url : "";
+      inquiry.webhook = {
+        registered: Boolean(url),
+        /* 등록된 주소가 우리 수신구인지. 다른 곳을 가리키면 문의는 남의 서버로 간다. */
+        pointsHere: url.endsWith("/api/telegram"),
+        pending: Number(info?.pending_update_count) || 0,
+        lastError: info?.last_error_message || "",
+        lastErrorAt: info?.last_error_date
+          ? new Date(info.last_error_date * 1000).toISOString()
+          : "",
+      };
+      if (!url) {
+        inquiry.ready = false;
+        inquiry.detail = "webhook 미등록 — 고객이 봇에 남긴 문의가 서버까지 오지 않는다";
+      } else if (!inquiry.webhook.pointsHere) {
+        inquiry.ready = false;
+        inquiry.detail = "webhook 이 이 서버가 아닌 다른 주소로 등록돼 있다";
+      } else if (info?.last_error_message) {
+        inquiry.detail = `${inquiry.detail} (마지막 배달 오류: ${info.last_error_message})`;
+      }
+    } catch {
+      /* 조회에 실패한 것뿐이다. 등록 상태를 모른다는 것과 꺼져 있다는 것은 다르므로
+         ready 를 내리지 않고 "모름" 으로 남긴다. */
+      inquiry.webhook = { registered: null, pointsHere: null, pending: 0, lastError: "", lastErrorAt: "" };
     }
   }
 

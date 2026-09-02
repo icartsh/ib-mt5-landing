@@ -133,10 +133,26 @@ console.log("\n[2] 고객 → 운영자");
 {
   const res = await post(customerMsg("증거금이 얼마나 필요한가요?"));
   check("200 으로 답한다", res.statusCode === 200, `status=${res.statusCode}`);
-  check("운영자에게 한 건 전달", sent.length === 1 && String(sent[0].chat_id) === OWNER, JSON.stringify(sent));
+  check("운영자에게 전달", String(sent[0]?.chat_id) === OWNER, JSON.stringify(sent));
   check("문의 본문이 그대로 실린다", sent[0]?.text.includes("증거금이 얼마나 필요한가요?"));
   check("보낸 사람이 보인다", sent[0]?.text.includes("홍길동") && sent[0]?.text.includes("@gildong"));
   check("답장 표식이 붙는다", extractCustomerChatId(sent[0]?.text) === CUSTOMER, extractCustomerChatId(sent[0]?.text || ""));
+
+  /* 고객 화면이 조용하면 고객은 봇이 죽은 것으로 본다. 접수됐다는 사실은 돌려줘야 한다. */
+  check("고객에게 접수 확인이 간다", String(sent[1]?.chat_id) === CUSTOMER && sent[1]?.text.includes("전달되었습니다"), JSON.stringify(sent));
+  check("액션은 forwarded_with_receipt", res.payload?.action === "forwarded_with_receipt", res.payload?.action);
+}
+{
+  /* 접수 확인은 창 안에서 한 번만. 여러 줄로 나눠 쓰는 고객에게 봇이 도배하면 안 된다. */
+  sent = [];
+  __testing.resetFlood();
+  const r1 = mockRes();
+  await handler(mockReq(customerMsg("첫 줄")), r1);
+  await handler(mockReq(customerMsg("둘째 줄")), r1);
+  await handler(mockReq(customerMsg("셋째 줄")), r1);
+  const receipts = sent.filter((m) => String(m.chat_id) === CUSTOMER);
+  check("접수 확인은 창 안에서 한 번만", receipts.length === 1, `${receipts.length}건`);
+  check("문의 자체는 모두 전달된다", sent.filter((m) => String(m.chat_id) === OWNER).length === 3);
 }
 {
   const res = await post(customerMsg("/start naver_blog-cost_guide"));
@@ -148,7 +164,7 @@ console.log("\n[2] 고객 → 운영자");
 }
 {
   await post(customerMsg("", { photo: [{ file_id: "x" }] }));
-  check("사진만 온 경우에도 알린다", sent.length === 1 && sent[0].text.includes("텍스트가 아닌 메시지"));
+  check("사진만 온 경우에도 알린다", String(sent[0]?.chat_id) === OWNER && sent[0].text.includes("텍스트가 아닌 메시지"));
   check("사진 알림에도 답장 표식이 있다", extractCustomerChatId(sent[0].text) === CUSTOMER);
 }
 
@@ -177,11 +193,35 @@ console.log("\n[3] 운영자 → 고객 (답장)");
   check("전화로 연락하라고 안내한다", sent.some((m) => m.text.includes("남긴 연락처로 연락")));
   check("액션은 reply_failed", res.payload?.action === "reply_failed", res.payload?.action);
 }
+/* ------------------------------------------------------------------ */
+console.log("\n[3-1] 운영자가 봇에 말을 걸었을 때 (침묵 금지)");
+
 {
+  /* 예전에는 여기서 아무 응답도 없었다. 운영자 입장에서 "봇이 죽음" 과 "정상" 이
+     화면상 완전히 같았고, 실제로 그것 때문에 봇이 고장 났다고 보고가 올라왔다. */
   const res = await post({
     message: { chat: { id: Number(OWNER) }, from: { id: Number(OWNER) }, text: "메모" },
   });
-  check("운영자의 혼잣말은 무시한다", sent.length === 0 && res.payload?.action === "ignored", res.payload?.action);
+  check("운영자에게 반드시 응답한다", sent.length === 1 && String(sent[0].chat_id) === OWNER, JSON.stringify(sent));
+  check("여기 쓴 글은 고객에게 안 간다고 알린다", sent[0]?.text.includes("고객에게 가지 않습니다"), sent[0]?.text);
+  check("액션은 owner_help", res.payload?.action === "owner_help", res.payload?.action);
+  check("고객에게는 아무것도 안 간다", !sent.some((m) => String(m.chat_id) === CUSTOMER));
+}
+{
+  const res = await post({
+    message: { chat: { id: Number(OWNER) }, from: { id: Number(OWNER) }, text: "/start" },
+  });
+  check("운영자의 /start 는 상태 안내를 받는다", sent[0]?.text.includes("정상 동작 중"), sent[0]?.text);
+  check("답장으로 답한다는 사용법을 알려준다", sent[0]?.text.includes("답장(reply)"));
+  check("운영자 계정으로는 고객 흐름을 못 탄다고 알려준다", sent[0]?.text.includes("다른 텔레그램 계정"));
+  check("액션은 owner_help", res.payload?.action === "owner_help", res.payload?.action);
+}
+{
+  const res = await post({
+    message: { chat: { id: Number(OWNER) }, from: { id: Number(OWNER) }, text: "/help" },
+  });
+  check("/help 도 같은 안내를 준다", sent[0]?.text.includes("문의 수신함"), sent[0]?.text);
+  check("액션은 owner_help", res.payload?.action === "owner_help", res.payload?.action);
 }
 
 /* ------------------------------------------------------------------ */
@@ -245,8 +285,10 @@ console.log("\n[6] 폭주 방지");
   for (let i = 0; i < 25; i += 1) {
     await handler(mockReq(customerMsg(`도배 ${i}`)), res);
   }
-  check("상한을 넘으면 더 전달하지 않는다", sent.length <= 15, `${sent.length}건 전달됨`);
-  check("마지막 전달에 경고가 붙는다", sent[sent.length - 1]?.text.includes("너무 많습니다"), sent[sent.length - 1]?.text);
+  const toOwner = sent.filter((m) => String(m.chat_id) === OWNER);
+  check("상한을 넘으면 더 전달하지 않는다", toOwner.length <= 15, `${toOwner.length}건 전달됨`);
+  check("마지막 전달에 경고가 붙는다", toOwner[toOwner.length - 1]?.text.includes("너무 많습니다"), toOwner[toOwner.length - 1]?.text);
+  check("도배해도 접수 확인은 한 번만", sent.filter((m) => String(m.chat_id) === CUSTOMER).length === 1);
 }
 
 /* ------------------------------------------------------------------ */
