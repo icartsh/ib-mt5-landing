@@ -97,12 +97,39 @@ async function sendTelegram(lead) {
 /* 구글 시트 (Apps Script 웹앱)                                          */
 /* -------------------------------------------------------------------- */
 
+/**
+ * Apps Script 웹앱은 실패를 HTTP 상태로 알려주지 않는다.
+ *
+ *   - doPost 안에서 예외가 나도 200 + {"ok":false,"error":...} 로 답한다.
+ *   - 배포 액세스 권한이 "모든 사용자" 가 아니면 200 + 구글 로그인 HTML 이 온다.
+ *
+ * 상태 코드만 보면 둘 다 성공으로 보인다. 시트가 유일한 기록일 때 이걸 성공으로
+ * 치면 한 줄도 안 남은 채 "접수되었습니다" 가 나가고, 그 사람은 오지 않는 전화를
+ * 기다린다. 그래서 본문을 열어 ok:true 를 직접 확인한다.
+ */
+function assertSheetsAck(text) {
+  const head = String(text).trim().slice(0, 200);
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // JSON 이 아니면 십중팔구 구글 로그인 페이지나 오류 페이지다.
+    if (/^\s*<|<html/i.test(head)) {
+      throw new Error("웹앱이 HTML 을 반환 — 배포 액세스 권한이 '모든 사용자' 인지 확인해 주세요.");
+    }
+    throw new Error(`응답을 해석하지 못함: ${head}`);
+  }
+
+  if (data?.ok !== true) throw new Error(`웹앱이 저장을 거부: ${data?.error || head}`);
+}
+
 async function sendSheets(lead) {
   if (!config.sheetsWebhookUrl) {
     return { name: "sheets", durable: true, attempted: false, ok: false, detail: "URL 미설정" };
   }
   try {
-    await postJson(config.sheetsWebhookUrl, lead);
+    assertSheetsAck(await postJson(config.sheetsWebhookUrl, lead));
     return { name: "sheets", durable: true, attempted: true, ok: true, detail: "ok" };
   } catch (err) {
     return { name: "sheets", durable: true, attempted: true, ok: false, detail: String(err?.message || err) };
