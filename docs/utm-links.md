@@ -23,7 +23,15 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 5. 단축 URL(비틀리·네이버 단축)을 써도 **원본에 utm 이 붙어 있어야** 한다. 단축이 utm 을 대신하지 않는다.
 
 **베이스 URL** — 아래 표의 `{BASE}` 자리에 확정된 랜딩 주소를 넣는다.
-현재는 프리뷰 주소이며, 도메인 확정 시 이 문서의 `{BASE}` 만 일괄 교체한다.
+
+| 상태 | 주소 | 신청 접수 |
+|---|---|---|
+| 지금 (검토용 프리뷰) | `https://icartsh.github.io/ib-mt5-landing` | **안 됨** — 페이지 상단에 프리뷰 배너가 뜬다 |
+| 배포 확정 후 | `https://____.vercel.app` (또는 자체 도메인) | 됨 |
+
+> **프리뷰 주소로는 링크를 뿌리지 않는다.** 신청이 접수되지 않아서, 유입은 생기는데
+> 리드는 한 건도 안 남는다. 배포 주소가 나오면 이 문서의 `{BASE}` 를 일괄 교체하고
+> 그때부터 배포한다. 자체 도메인으로 옮길 때도 같은 방식으로 한 번 더 교체한다.
 
 ---
 
@@ -58,12 +66,18 @@ utm 없이 뿌린 링크는 어느 채널에서 온 리드인지 영원히 알 �
 | 고정 댓글 | `pinned_{영상슬러그}` | `{BASE}/?utm_source=youtube&utm_medium=pinned_comment&utm_campaign=cost_guide&utm_content=pinned_cost_structure` |
 | 채널 배너/정보 링크 — 상시 | `channel` | `{BASE}/?utm_source=youtube&utm_medium=channel&utm_campaign=always_on&utm_content=channel` |
 
-### 카카오톡 오픈채팅
+### 카카오톡 (공유 경로)
+
+**상담 채널로서의 카카오는 없다** (사장님 확정, 2026-09-02 — 상담은 전화 콜백 한 가지).
+오픈채팅·1:1 채널 링크는 존재하지 않으므로 쓰지 않는다.
+
+다만 카톡으로 **링크를 보내는 것**은 여전히 유효한 유입 경로다. 개인 대화나 단톡방에
+페이지 주소를 붙여 넣을 때 아래를 쓴다.
 
 | 용도 | utm_content | 링크 |
 |---|---|---|
-| 오픈채팅 공지 | `notice` | `{BASE}/?utm_source=kakao&utm_medium=openchat&utm_campaign=always_on&utm_content=notice` |
-| 1:1 채널 메시지 | `channel_msg` | `{BASE}/?utm_source=kakao&utm_medium=channel_message&utm_campaign=always_on&utm_content=channel_msg` |
+| 개인 대화로 공유 | `dm` | `{BASE}/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=dm` |
+| 단톡방에 공유 | `group` | `{BASE}/?utm_source=kakao&utm_medium=share&utm_campaign=always_on&utm_content=group` |
 
 ### 네이버 지식iN / 카페
 
