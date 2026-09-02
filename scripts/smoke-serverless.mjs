@@ -270,6 +270,31 @@ console.log("\n[8] 구글 시트만 붙은 경우 — 알림 없이 시트 하�
   config.sheetsWebhookUrl = "";
 }
 
+console.log("\n[9] 환경변수를 하나도 안 넣고 배포한 경우 — 갓 Import 한 Vercel 프로젝트의 상태");
+{
+  /* 리포를 Vercel 에 Import 하고 설정을 건드리지 않으면 정확히 이 상태가 된다:
+     토큰도 시트 URL 도 없다. 페이지는 멀쩡히 떠 있는데 접수만 전부 거절된다.
+     빈 껍데기를 라이브라고 착각하지 않도록, 이 경우의 문구는 "일시적인 문제"가
+     아니라 "설정이 완료되지 않았습니다" 여야 한다 — 재시도해도 소용없기 때문이다. */
+  const { config } = await import("../server/config.mjs");
+  const savedToken = config.telegramBotToken;
+  config.telegramBotToken = "";
+  config.sheetsWebhookUrl = "";
+
+  const before = sent.length;
+  const res = await call(validLead(), { ip: "10.0.9.1" });
+  check("HTTP 503 — 조용히 접수된 척하지 않는다", res.statusCode === 503, `got ${res.statusCode}`);
+  check("ok:false", res.payload?.ok === false);
+  check(
+    "'설정이 완료되지 않았습니다' — 재시도 안내가 아니다",
+    /설정이 완료되지 않았습니다/.test(res.payload?.error || ""),
+    res.payload?.error
+  );
+  check("바깥으로 나간 요청 없음", sent.length === before, `sent=${sent.length}`);
+
+  config.telegramBotToken = savedToken;
+}
+
 /* ------------------------------------------------------------------ */
 
 telegram.close();

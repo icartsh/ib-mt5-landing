@@ -84,6 +84,32 @@ npm run smoke                          # 터미널 3 → data/notifications.log 
 
 Vercel 환경변수에 `TELEGRAM_BOT_TOKEN` 하나만 넣으면 접수가 살아난다.
 
+### 순서 — 환경변수는 Deploy **전에** 넣어야 한다
+
+```
+① vercel.com → Continue with GitHub
+② Add New → Project → icartsh/ib-mt5-landing 옆 Import
+③ Configure Project 화면에서 "Environment Variables" 를 펼치고
+     TELEGRAM_BOT_TOKEN = <@BotFather 토큰>          ← 이 줄이 빠지면 아래 사고가 난다
+④ Deploy
+⑤ 텔레그램에서 그 봇에게 /start 를 한 번 보낸다 (chat_id 자동 탐색용)
+```
+
+**③을 건너뛰면 페이지는 정상으로 뜨는데 신청이 100% 거절된다.** 토큰도 시트 URL 도
+없으면 리드를 담을 durable sink 가 하나도 없고, `api/lead.js` 는 그 상태에서
+접수된 척하지 않고 `503 "접수 설정이 완료되지 않았습니다."` 를 돌려준다. 겉보기에는
+멀쩡한 랜딩페이지라 라이브로 착각하기 쉽다. 이 상태는 스모크 `[9]` 가 검사한다.
+
+이미 ③ 없이 Deploy 했다면 Settings → Environment Variables 에서 추가한 뒤
+**반드시 Redeploy** 해야 한다. Vercel 문서:
+> Any change you make to environment variables are not applied to previous
+> deployments, they only apply to new deployments.
+
+> **Deploy Button(`vercel.com/clone`)은 쓰지 않는다.** 그 흐름은 소스 리포를 사용자
+> 계정으로 **복제**하기 때문에, 배포가 원본이 아니라 복제본을 추적하게 된다.
+> 그러면 이 리포에 푸시해도 라이브에 반영되지 않는다. 리포 주인이 직접 Import 하는
+> 위 순서가 맞다.
+
 ## 개인정보 취급
 
 - 수집 항목은 **이름 / 연락처 / 거래 경험 수준 / 유입 경로 4개뿐**이다. 늘리지 않는다.
