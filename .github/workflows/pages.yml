@@ -23,16 +23,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 표현 제약 위반은 배포를 막는다. 잘못된 문구가 라이브로 나가는 것이
-      # 배포가 늦어지는 것보다 비싸다 (IB-2 6절 / IB-6 / IB-8).
-      - name: Check landing copy constraints
-        run: node scripts/copy-guard.mjs
-
-      # 리드 접수 경로가 "아무 데도 저장 안 됐는데 접수됐다고 답하는" 상태로
-      # 회귀하지 않는지 확인한다. 가짜 텔레그램 서버를 띄워서 도는 검사라
-      # 외부 비밀값이 필요 없다.
-      - name: Test lead intake path
-        run: node scripts/smoke-serverless.mjs
+      # 검사는 `npm test` 하나로 돈다. 여기에 개별 스크립트를 나열해 두면
+      # 새 검사를 추가할 때마다 이 파일을 같이 고쳐야 하고, 잊으면 **로컬에서는
+      # 도는 검사가 배포 길목에서만 빠진다** — 실제로 문의 중계 검사가 그렇게 빠져 있었다.
+      #
+      # 이 검사들이 막는 것: 표현 제약 위반(IB-2 6절 / IB-6 / IB-8), 리드가
+      # 아무 데도 저장되지 않았는데 접수됐다고 답하는 회귀, 문의 중계의 답장 오배송.
+      # 전부 가짜 텔레그램 서버로 돌아서 외부 비밀값이 필요 없다.
+      - name: Run checks
+        run: npm test
 
       - name: Assemble static site
         run: |

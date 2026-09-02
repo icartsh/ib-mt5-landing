@@ -30,14 +30,29 @@
 
 ## 켜는 순서 (10분)
 
+### 0. 먼저 무엇이 남았는지 본다
+
+```bash
+npm run telegram -- doctor
+```
+
+여섯 가지(알림 봇 토큰 / `chat_id` / 문의 봇 토큰 / webhook 비밀값 / webhook 등록 / 사장님의
+START)를 한 번에 짚고 **남은 것만 순서대로** 알려 준다. 값을 하나 넣을 때마다 다시 돌리면 된다.
+"남은 것 없음" 이 나올 때까지가 설정이다.
+
+여섯 개 중 하나만 빠져도 **화면에는 아무 이상이 없다.** 버튼은 눌리고, 고객 쪽에는 전송된
+것으로 보이고, 오류도 안 뜬다. 빠진 것이 무엇이냐에 따라 결과만 조용히 달라진다 — 문의가
+사라지거나, 리드 접수가 멈추거나, 답장이 안 나간다. 그래서 눈으로 확인하지 않는다.
+
 ### 1. 사장님 `chat_id` 를 고정한다 — 이것부터
 
 1. 텔레그램에서 **@icartsh_answer_bot** 에게 아무 말이나 보낸다.
-2. 브라우저에서 `https://api.telegram.org/bot<알림봇_토큰>/getUpdates` 를 연다.
-3. `"chat":{"id":123456789` 의 숫자를 복사한다.
-4. Vercel → Project Settings → Environment Variables 에 `TELEGRAM_CHAT_ID` 로 넣는다.
+2. `npm run telegram -- doctor` 를 돌린다. 2번 항목에 `TELEGRAM_CHAT_ID=숫자` 가 그대로 나온다.
+3. Vercel → Project Settings → Environment Variables 에 그 값을 넣는다.
 
-> 이 값은 비밀이 아니지만 토큰이 박힌 위 주소는 방문 기록에 남는다. 확인 후 주소창을 비워 둔다.
+> 브라우저로 `https://api.telegram.org/bot<알림봇_토큰>/getUpdates` 를 열어도 같은 값이 나오지만,
+> 그러면 **토큰이 방문 기록과 자동완성에 남는다.** 봇 토큰 하나면 그 봇으로 아무에게나 메시지를
+> 보낼 수 있다 — 우리 경우 고객 대화 전부가 거기 붙어 있다. `doctor` 는 그 주소를 띄우지 않는다.
 
 ### 2. 문의 봇 토큰을 넣는다
 
@@ -72,6 +87,7 @@ npm run telegram -- status
 ### 6. 확인
 
 ```bash
+npm run telegram -- doctor        # "남은 것 없음" 이 나와야 한다
 curl -s https://ib-mt5-landing.vercel.app/api/health | python3 -m json.tool
 ```
 

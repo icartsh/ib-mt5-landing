@@ -11,8 +11,9 @@
     "smoke": "node scripts/smoke.mjs",
     "smoke-serverless": "node scripts/smoke-serverless.mjs",
     "smoke-telegram": "node scripts/smoke-telegram.mjs",
+    "smoke-telegram-doctor": "node scripts/smoke-telegram-doctor.mjs",
     "telegram": "node scripts/telegram-setup.mjs",
     "copy-guard": "node scripts/copy-guard.mjs",
-    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs"
+    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs"
   }
 }
