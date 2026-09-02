@@ -70,6 +70,35 @@
     }
   }
 
+  /**
+   * 텔레그램은 utm 파라미터를 읽지 않는다. 붙여 봐야 아무도 읽지 못하는 글자가 주소에
+   * 늘어날 뿐이다. 대신 **봇 주소(t.me/xxx_bot)** 에는 텔레그램이 공식으로 지원하는
+   * `?start=<페이로드>` 로 실어 보낸다 — 봇이 `/start <페이로드>` 로 받으므로
+   * 문의를 받는 쪽에서 어느 글을 보고 온 문의인지 구분할 수 있다.
+   * 봇이 페이로드를 쓰지 않더라도 사용자 화면은 똑같다(그냥 대화가 열린다).
+   * 채널·그룹 주소에는 이 자리가 없으므로 받은 주소를 그대로 내보낸다.
+   */
+  function telegramHref(url) {
+    try {
+      var u = new URL(url, location.href);
+      if (u.hostname !== "t.me" || !/_?bot$/i.test(u.pathname.replace(/^\//, ""))) return url;
+
+      var utm = currentUtm();
+      var payload = [utm.utm_source, utm.utm_campaign]
+        .filter(Boolean)
+        .join("-")
+        .replace(/[^A-Za-z0-9_-]/g, "")
+        .slice(0, 64); /* 텔레그램 제한: 64자, A-Z a-z 0-9 _ - */
+
+      if (!payload) return url;
+      u.search = "";
+      u.searchParams.set("start", payload);
+      return u.toString();
+    } catch (e) {
+      return url;
+    }
+  }
+
   var HREF = {
     mim: typeof CFG.mimSignupUrl === "string" ? CFG.mimSignupUrl.trim() : "",
     telegram: typeof CFG.telegramUrl === "string" ? CFG.telegramUrl.trim() : "",
@@ -86,7 +115,7 @@
       return;
     }
 
-    el.setAttribute("href", withUtm(href));
+    el.setAttribute("href", kind === "telegram" ? telegramHref(href) : withUtm(href));
     el.setAttribute("target", "_blank");
     /* 외부 탭에서 우리 페이지 객체에 접근하지 못하게 한다 (탭내빙 방지) */
     el.setAttribute("rel", "noopener noreferrer");

@@ -16,14 +16,19 @@ window.IB_CONFIG = {
    * 비워 두면 가입 버튼이 뜨지 않고, 그 자리를 1:1 상담 신청이 대신한다 —
    * IB 코드 없는 링크를 내보내면 우리를 통한 가입으로 집계되지 않아 그냥 손해다.
    * 값이 들어오는 순간 broker/signup 페이지의 모든 가입 버튼이 한꺼번에 살아난다.
+   *
+   * 주소 끝의 `LKXAQG` 가 우리 IB 코드다. **이 문자열이 빠지면 가입은 되지만 우리 실적으로
+   * 잡히지 않는다** — 화면상 아무 차이가 없어서 사고가 나도 알아채기 어렵다.
+   * 주소를 손볼 일이 생기면 코드가 그대로인지 먼저 확인할 것. (해시 라우팅이라
+   * links.js 는 이 주소에 utm 을 붙이지 않고 원본 그대로 내보낸다.)
    */
-  mimSignupUrl: "",
+  mimSignupUrl: "https://client.myinvestmentmarkets.com/#/login/LKXAQG",
 
   /**
    * 텔레그램 문의 채널·봇 주소 (예: "https://t.me/xxxx").
    * 비워 두면 텔레그램 버튼 자체가 렌더링되지 않는다. 죽은 링크를 내보내지 않기 위해서다.
    */
-  telegramUrl: "",
+  telegramUrl: "https://t.me/icartsh_answer_bot",
 
   /** 푸터 표기. 사업자 정보 확정 후 채운다. */
   brandName: "",
