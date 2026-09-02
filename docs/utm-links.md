@@ -167,7 +167,7 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 
 ## 4. 링크 만들 때 쓰는 체크리스트
 
-- [ ] 위의 **배포 게이트**를 통과했는가 (접수가 `ok:true` 인가)
+- [ ] 위의 **배포 게이트**를 통과했는가 (`/api/health` 가 `"accepting":true` 인가)
 - [ ] 주소가 `https://ib-mt5-landing.vercel.app` 인가 (배포별 해시 주소가 아닌가)
 - [ ] `utm_source` / `utm_medium` 이 2절 사전에 있는 값인가
 - [ ] `utm_content` 가 이 소재 전용으로 새로 만든 값인가
