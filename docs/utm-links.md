@@ -74,6 +74,21 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 
 ### 네이버 블로그
 
+**발행 예정 5편 (B1~B5)** — 링크는 원고 본문에 이미 박혀 있다. 발행할 때 손댈 것이 없다.
+
+| 글 | utm_content | 캠페인 | 링크 |
+|---|---|---|---|
+| B1 증거금 | `b01` | `seed_w1_cost` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=organic&utm_campaign=seed_w1_cost&utm_content=b01#apply` |
+| B2 수수료 계산법 | `b02` | `seed_w1_cost` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=organic&utm_campaign=seed_w1_cost&utm_content=b02#apply` |
+| B3 세금 | `b03` | `seed_w1_cost` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=organic&utm_campaign=seed_w1_cost&utm_content=b03#apply` |
+| B4 미니나스닥 | `b04` | `seed_w2_onboarding` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=organic&utm_campaign=seed_w2_onboarding&utm_content=b04#apply` |
+| B5 하는법 | `b05` | `seed_w2_onboarding` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=organic&utm_campaign=seed_w2_onboarding&utm_content=b05#apply` |
+
+> `utm_medium` 이 `post` 가 아니라 `organic` 인 이유. 이 다섯 편은 광고를 태우지 않는
+> 자연 검색 유입 글이고, 나중에 같은 글을 광고로 밀 때 `paid` 와 갈라 봐야 한다.
+> **원고에 이미 들어간 값이라 여기서 문서를 값에 맞춘다** — 반대로 하면 원고 5편과
+> 첨부된 붙여넣기 파일을 전부 다시 만들어야 하고, 링크가 틀린 채로 발행될 위험이 생긴다.
+
 | 용도 | utm_content | 링크 |
 |---|---|---|
 | 비용 구조 글 (본문 하단 CTA) | `post_cost_structure` | `https://ib-mt5-landing.vercel.app/?utm_source=naver_blog&utm_medium=post&utm_campaign=cost_guide&utm_content=post_cost_structure` |
@@ -111,6 +126,13 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 | Instagram Reels | `instagram` | `reels` | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=reels&utm_campaign=shortform_organic&utm_content=sf_001` |
 | TikTok | `tiktok` | `short_video` | `https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001` |
 | Threads | `threads` | `short_video` | `https://ib-mt5-landing.vercel.app/?utm_source=threads&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001` |
+
+**프로필(bio) 상시 링크** — Reels·TikTok 은 캡션 링크가 클릭되지 않아 bio 링크가 유일한 통로다. 계정당 하나이므로 편별로 갈리지 않는다. 편별 기여는 발행 날짜로 대조한다.
+
+| 채널 | 링크 |
+|---|---|
+| Instagram bio | `https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=bio&utm_campaign=always_on&utm_content=bio` |
+| TikTok bio | `https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=bio&utm_campaign=always_on&utm_content=bio` |
 
 **영상 번호 규칙**
 
@@ -161,9 +183,9 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 
 **utm_source** · `naver_blog` `instagram` `youtube` `tiktok` `threads` `kakao` `naver_kin` `naver_cafe` `referral` `internal`
 
-**utm_medium** · `post` `profile` `bio` `story` `reels` `feed` `description` `shorts` `short_video` `pinned_comment` `channel` `openchat` `channel_message` `answer` `direct` `test`
+**utm_medium** · `post` `organic` `profile` `bio` `story` `reels` `feed` `description` `shorts` `short_video` `pinned_comment` `channel` `openchat` `channel_message` `answer` `direct` `test`
 
-**utm_campaign** · `cost_guide` (비용 구조 주제) · `shortform_organic` (숏폼 자연 유입) · `always_on` (상시 링크) · `qa` (내부 테스트)
+**utm_campaign** · `cost_guide` (비용 구조 주제) · `seed_w1_cost` (첫 주 비용·증거금·세금 글) · `seed_w2_onboarding` (둘째 주 상품 이해·시작 절차 글) · `shortform_organic` (숏폼 자연 유입) · `always_on` (상시 링크) · `qa` (내부 테스트)
 
 ---
 

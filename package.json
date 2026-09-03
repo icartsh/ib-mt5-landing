@@ -16,7 +16,10 @@
     "smoke-telegram-doctor": "node scripts/smoke-telegram-doctor.mjs",
     "telegram": "node scripts/telegram-setup.mjs",
     "copy-guard": "node scripts/copy-guard.mjs",
-    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs && node scripts/ship-guard.mjs",
+    "content-guard": "node scripts/content-guard.mjs",
+    "blog-html": "node scripts/blog-to-html.mjs",
+    "blog-thumb": "python3 scripts/blog-thumb.py",
+    "test": "node scripts/copy-guard.mjs && node scripts/content-guard.mjs && node scripts/blog-to-html.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs && node scripts/ship-guard.mjs",
     "ship-guard": "node scripts/ship-guard.mjs",
     "ship": "npm test && node scripts/ship-guard.mjs --strict"
   }

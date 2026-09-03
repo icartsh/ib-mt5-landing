@@ -13,6 +13,13 @@
  *   브라우저로 파일을 열고 Ctrl+A → Ctrl+C → 네이버 글쓰기 화면에 Ctrl+V.
  *   파일 안에는 본문만 들어 있다. 안내 문구를 같이 넣으면 Ctrl+A 에 딸려 들어간다.
  *
+ * 본문에서 빠지는 두 줄 (`pasteBody`).
+ *   제목(h1) 과 `메타 설명 (검색 결과 노출문)` 라벨은 붙여넣기 본문에 넣지 않는다.
+ *   제목은 네이버 제목 칸에 따로 들어가므로 본문에 남으면 같은 제목이 두 번 보이고,
+ *   `메타 설명 …` 은 우리 작업용 라벨이라 그대로 발행되면 독자 화면에 편집 메모가 찍힌다.
+ *   둘 다 원고 파일에는 있어야 하는 줄이라, 걷어내는 자리는 여기 한 곳뿐이다.
+ *   라벨 아래 문장은 남긴다 — 네이버는 본문 첫 문장을 검색 노출문으로 쓴다.
+ *
  * 스타일은 전부 인라인이다. <style> 블록은 클립보드를 타고 넘어가지 못하는 경우가 있다.
  *
  * 원고 제약 하나. 인라인 서식은 **한 줄 안에서** 처리한다(문단·인용 모두 줄 단위로 <br> 로 잇는다).
@@ -225,6 +232,13 @@ function visibleText(html) {
     .replace(/&gt;/g, ">");
 }
 
+/* 붙여넣기 본문에서 걷어내는 두 줄. 위 머리말의 `pasteBody` 항목 참조. */
+function pasteBody(body) {
+  return body
+    .replace(/^#\s+.*\r?\n/, "")
+    .replace(/^>\s*\*\*메타 설명[^\n]*\r?\n/m, "");
+}
+
 const LEAKS = [
   [/^\s*#{1,6}\s/m, "제목 기호(#)가 글자로 남았다"],
   [/\|\s*-{3,}/, "표 구분선(|---|)이 글자로 남았다"],
@@ -250,7 +264,7 @@ for (const f of files) {
   /* 저장소 안 메모용 주석은 발행본이 아니다. 첫 제목 앞은 전부 버린다. */
   const body = raw.replace(/^[\s\S]*?(?=^# )/m, "");
   const title = (body.match(/^#\s+(.*)$/m) || [, f])[1];
-  const article = convert(body);
+  const article = convert(pasteBody(body));
 
   const leftover = visibleText(article);
   for (const [re, msg] of LEAKS) {
@@ -262,6 +276,11 @@ for (const f of files) {
   }
   if (article.includes("〔작성자")) problems.push(`${f}: 작성자 표기가 비어 있다`);
   if (!leftover.trim()) problems.push(`${f}: 본문이 비었다`);
+  /* 아래 둘은 붙여도 화면이 깨지지 않는다 — 그래서 발행하고 나서야 보인다. */
+  if (/<h1[\s>]/.test(article))
+    problems.push(`${f}: 제목이 본문에 남았다 — 네이버 제목 칸과 겹쳐 두 번 보인다`);
+  if (/메타 설명/.test(leftover))
+    problems.push(`${f}: 작업용 라벨 '메타 설명' 이 본문에 남았다 — 독자 화면에 편집 메모가 찍힌다`);
 
   const html =
     `<!doctype html><html lang="ko"><head><meta charset="utf-8">` +
