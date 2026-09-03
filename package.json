@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "description": "MT5 해외선물 1:1 세팅 지원 — 랜딩페이지 + 신청 폼 + 리드 저장/알림",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server/server.mjs",
     "mock-webhook": "node scripts/mock-webhook.mjs",
@@ -14,6 +16,8 @@
     "smoke-telegram-doctor": "node scripts/smoke-telegram-doctor.mjs",
     "telegram": "node scripts/telegram-setup.mjs",
     "copy-guard": "node scripts/copy-guard.mjs",
-    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs"
+    "test": "node scripts/copy-guard.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs && node scripts/ship-guard.mjs",
+    "ship-guard": "node scripts/ship-guard.mjs",
+    "ship": "npm test && node scripts/ship-guard.mjs --strict"
   }
 }

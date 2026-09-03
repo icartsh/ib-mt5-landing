@@ -28,8 +28,15 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("../", import.meta.url));
 
-/** 사람에게 닿는 자리. 여기가 바뀌었는데 origin 에 없으면 라이브는 옛것이다. */
-const SHIPPED = ["public", "api", "server", "vercel.json", "package.json"];
+/** 사람에게 닿는 자리. 여기가 바뀌었는데 origin 에 없으면 라이브는 옛것이다.
+ *
+ * `scripts` 가 들어 있는 이유: `vercel.json` 의 buildCommand 와 CI 가 이 폴더를 실행한다.
+ * 새 검사 규칙을 만들어 놓고 푸시하지 않으면 배포 길목은 옛 검사를 계속 쓴다 —
+ * 로컬에서는 잡히는데 배포에서는 안 잡히는, 이 저장소에서 이미 한 번 난 사고다.
+ *
+ * `content`·`docs`·`shorts` 는 뺀다. 원고가 미푸시인 것은 라이브 화면을 바꾸지 않는다.
+ * 실패를 흔하게 만들면 가드가 꺼진다. */
+const SHIPPED = ["public", "api", "server", "scripts", "vercel.json", "package.json"];
 
 const BASE = "origin/main";
 

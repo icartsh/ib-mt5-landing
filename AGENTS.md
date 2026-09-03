@@ -63,7 +63,7 @@ npm run ship   # npm test + 배송 가드(strict)
 심볼(`US100`·`GER40`)을 11커밋 동안 라이브로 띄웠다. 잡은 것은 프로덕션 HTML 을 직접
 받아 본 것뿐이었다.
 
-`ship-guard` 가 이걸 본다. 배송면(`public`·`api`·`server`·`vercel.json`·`package.json`)에
+`ship-guard` 가 이걸 본다. 배송면(`public`·`api`·`server`·`scripts`·`vercel.json`·`package.json`)에
 미푸시 커밋이 있으면 `npm test` 단계에서 이미 막고, `--strict`(=`npm run ship`)는 미커밋까지
 막는다. 미커밋 검사를 기본에서 뺀 이유는 개발 중 작업 폴더가 당연히 더럽기 때문이다 —
 **늘 빨간불인 가드는 꺼진다.** 원고·문서처럼 배송면 밖은 실패로 치지 않는다.
