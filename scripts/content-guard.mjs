@@ -84,6 +84,40 @@ const CTA_TEXT_BY_CAMPAIGN = new Map([["seed_w1_cost", "내 조건으로 비용 
 
 const CAMPAIGNS = new Set(["seed_w1_cost", "seed_w2_onboarding"]);
 
+/* ---------- 5. 상품 정합성 — 독자가 우리 계좌에서 실제로 그 주문을 낼 수 있는가 ----------
+ *
+ * 지금까지 가드는 "원고가 규격을 지켰는가"만 봤다. 그런데 원고가 규격을 다 지키고도
+ * **우리가 보내는 계좌에서 실행할 수 없는 내용**일 수 있다. B4 가 그 상태로 PASS 했다(2026-09-03).
+ *
+ * MIM 은 장내 선물 브로커가 아니라 **Forex·CFD 플랫폼**이다. 오늘 MIM 공식 사이트에서 확인한 근거:
+ *   - sitemap.xml 의 상품 페이지 전부: forex / indices / commodities / crypto / stocks
+ *     → /kr/futures · /kr/derivatives 는 404. 선물 상품 라인 자체가 없다.
+ *   - 모든 페이지 푸터: "CFD 트레이딩의 미래."  · 홈 메타: "글로벌 Forex·CFD 플랫폼"
+ *   - /kr/indices 의 나스닥100 심볼 칩은 **NAS100** 이다. NQ·MNQ 는 어디에도 없다.
+ *   - /kr/indices "투명한 제로 수수료 환경" → 거래소·청산 수수료 층이 존재하지 않는다.
+ *
+ * 그래서 CME 선물 심볼과 선물 고유 개념을 그대로 쓰면, 독자는 우리 CTA 를 타고 계좌를 만든 뒤
+ * **주문 화면에서 그 심볼을 찾지 못한다.** 이건 죽은 링크보다 늦게, 그리고 더 크게 드러난다 —
+ * 원고에도 페이지에도 이상이 없고, 독자가 입금까지 마친 다음에야 드러난다.
+ *
+ * `해외선물` 이라는 검색어 자체는 막지 않는다. 벤치마크(moneyinvest.co.kr)도 `해외선물` 11회로
+ * 문을 열고 상품 층위에서는 "400여 종 CFD" 라고 그대로 적는다. 막는 것은 **상품 층위의 혼동**이다.
+ */
+
+/** 원고가 반드시 한 번은 해야 하는 구분. 문구는 자유, 구분 자체는 필수. */
+const CFD_DISCLOSURE = /CFD/;
+const CFD_DISTINCTION = /(차액결제|선물이\s*아니|장내\s*선물|선물\s*계약이\s*아니)/;
+
+/** 우리 계좌에서 주문할 수 없는 것들. URL 은 제외하고 본문만 본다. */
+const FUTURES_ONLY = [
+  [/(?<![A-Za-z])(NQ|MNQ|MES|MYM|RTY|M2K)(?![A-Za-z])/, "CME 선물 심볼 — MIM 주문 화면에 없다 (나스닥100은 NAS100 CFD)"],
+  [/E-?mini|이-?미니/i, "CME 선물 계약 계열 명칭 — MIM 은 해당 계약을 취급하지 않는다"],
+  [/만기(월|일)|근월물|계약\s*교체|롤오버/, "만기·롤오버는 장내 선물 개념 — CFD 에는 만기가 없어 독자가 찾을 수 없다"],
+  /* "거래소·청산 비용" 뿐 아니라 뒤에 명사가 안 붙는 "거래소·청산," 도 잡는다 —
+     b05 가 그 형태로 첫 판에서 빠져나갔다. */
+  [/거래소[·,][\s]*청산|청산\s*수수료/, "거래소·청산 수수료 층은 MIM 비용 구조에 없다 (스프레드·스왑)"],
+];
+
 for (const f of files) {
   const t = body(readFileSync(join(BLOG_DIR, f), "utf8"));
 
@@ -132,6 +166,25 @@ for (const f of files) {
     const bareRoute = line.replace(/https?:\/\/\S+/g, "").match(/(?<![\w/])\/(broker|signup|apply)\b/);
     if (bareRoute) fail(`[경로] ${f}:${n}: "${bareRoute[0]}" 를 주소 없이 썼다 — 전체 URL 로 바꾼다.`);
   });
+
+  /* 상품 정합성 (위 5번). 링크 안의 글자는 독자가 읽는 본문이 아니므로 빼고 본다 —
+     utm_content=b04 의 "b04" 같은 것이 심볼로 잡히면 규칙이 신뢰를 잃는다. */
+  const prose = t.replace(/https?:\/\/\S+/g, " ");
+  const hasCfd = CFD_DISCLOSURE.test(prose) && CFD_DISTINCTION.test(prose);
+
+  for (const [re, why] of FUTURES_ONLY) {
+    const hit = prose.match(re);
+    if (hit) fail(`[상품] ${f}: "${hit[0].trim()}" — ${why}`);
+  }
+
+  /* 선물 용어가 하나도 없어도 필요하다. `해외선물` 로 검색해 들어온 독자는 장내 선물을 기대하는데
+     우리 CTA 는 CFD 계좌로 보낸다. 그 구분을 원고 어딘가에서 한 번은 해야 한다. */
+  if (!hasCfd) {
+    fail(
+      `[상품] ${f}: 상품 층위 구분이 없다 — 본문에 "CFD" 와 "차액결제/선물이 아니다" 를 모두 담아 ` +
+        `우리 CTA 가 보내는 계좌가 장내 선물이 아니라 CFD 계좌임을 밝힌다.`,
+    );
+  }
 
   /* 숫자를 쓰면 출처와 기준일을 붙인다 (IB-6 체크리스트 5). 기준일 없는 숫자는
      시간이 지나면 그냥 틀린 정보가 된다 — 세율·공제는 개정되는 값이다. */
