@@ -207,6 +207,77 @@ for (const f of pages) {
   }
 }
 
+/* ---------- 6-C. 상품 정합성 — 우리 계좌에서 실제로 주문할 수 있는가 ---------- */
+
+/* content-guard 5번과 같은 검사를, 이번엔 공개 페이지에 건다.
+   MIM 은 CFD·FX 마진 브로커다. 거래소 상장 선물 라인이 없다(`/kr/futures` 404).
+   그런데 우리 페이지 전체가 `해외선물` 로 서 있어서, 상품 층위를 밝히지 않으면
+   독자는 자기가 CME 선물 계좌를 여는 줄 알고 **입금까지 마친 뒤** 주문 화면에서 알게 된다.
+   404 나 죽은 링크보다 늦게, 그리고 돈이 들어간 다음에 드러나는 종류다.
+
+   심볼도 같이 본다. `US100`·`GER40` 은 MIM 공식 표기가 아니다(실제는 `NAS100`·`DE40`).
+   틀린 심볼을 적어 두면 독자가 Market Watch 에서 그 이름을 찾다가 못 찾는다.
+   MT5 실제 목록을 아직 확보하지 못했으므로(docs/mim-broker-facts.md 8절)
+   페이지에는 심볼을 적지 않고 "본인 주문 화면에서 확인" 으로 보낸다. */
+const FUTURES_ONLY = [
+  [/E-?mini|E-?미니/i, "거래소 선물 상품명"],
+  [/\bMNQ\b|\bNQ\b|\bMES\b|\bES\b(?!G)/, "CME 선물 심볼"],
+  [/거래소[·・,\s]*청산\s*수수료/, "거래소·청산 수수료 (MIM 에 없는 비용 층)"],
+  [/\b(?:US100|GER40|UK100)\b/, "MIM 공식 표기가 아닌 지수 심볼"],
+];
+
+/* `해외선물` 을 검색어로 쓰는 페이지는 상품이 CFD 라는 것을 같은 페이지에서 밝혀야 한다. */
+const SELLS_FUTURES_KEYWORD = /해외\s*선물/;
+const DECLARES_CFD = /CFD/;
+const DECLARES_NOT_FUTURES = /선물\s*계약이\s*아닙니다|차액결제/;
+
+for (const f of pages) {
+  const t = text.get(f);
+
+  for (const [re, what] of FUTURES_ONLY) {
+    const hit = t.match(re);
+    if (hit) {
+      fail(
+        `[상품정합성] ${f}: "${hit[0].trim()}" — ${what}. ` +
+          `MIM 주문 화면에 없는 이름이다. 독자가 입금한 뒤에야 드러난다.`
+      );
+    }
+  }
+
+  if (SELLS_FUTURES_KEYWORD.test(t)) {
+    if (!DECLARES_CFD.test(t)) {
+      fail(`[상품정합성] ${f}: "해외선물" 을 쓰면서 상품이 CFD 라는 표기가 없다.`);
+    } else if (!DECLARES_NOT_FUTURES.test(t)) {
+      fail(
+        `[상품정합성] ${f}: CFD 라고는 적었으나 "선물 계약이 아니다"(또는 "차액결제") 가 없다 — ` +
+          `독자는 둘을 같은 것으로 읽는다.`
+      );
+    }
+  }
+}
+
+/* 상품군 표에 CFD·FX 라고 붙지 않은 분류가 있으면, 그 줄만 선물처럼 읽힌다.
+   index.html 이 정확히 그 상태였다(암호화폐·주식만 CFD). 표는 한 줄만 빠져도 뜻이 뒤집힌다. */
+for (const f of pages) {
+  const html = source.get(f);
+  for (const tbl of html.match(/<table[^>]*class="spec"[^>]*>[\s\S]*?<\/table>/g) ?? []) {
+    const caption = (tbl.match(/<caption[^>]*>([\s\S]*?)<\/caption>/) || [])[1] ?? "";
+    if (!/상품군|거래\s*상품/.test(caption)) continue;
+    if (/전부\s*CFD/.test(caption)) continue; // 캡션이 표 전체를 한 번에 규정한 경우
+
+    const rows = [...tbl.matchAll(/<th scope="row">([\s\S]*?)<\/th>/g)].map((m) =>
+      m[1].replace(/<[^>]*>/g, "").trim()
+    );
+    const bare = rows.filter((r) => !/CFD|FX|마진/.test(r));
+    if (bare.length) {
+      fail(
+        `[상품정합성] ${f}: 상품군 표에서 "${bare.join('", "')}" 줄에 CFD·FX 표기가 없다 — ` +
+          `그 줄만 거래소 상품처럼 읽힌다. 캡션에 "전부 CFD" 를 붙이거나 줄마다 표기할 것.`
+      );
+    }
+  }
+}
+
 /* ---------- 6-B. 가입 링크에 IB 코드가 살아 있는가 ---------- */
 
 /* 우리 수익이 걸린 유일한 링크다. IB 코드가 빠진 주소도 **가입은 정상적으로 된다** —
@@ -306,5 +377,6 @@ if (failures.length) {
 console.log(
   `PASS  ${pages.length}개 페이지(${pages.join(", ")}) — ` +
     `금지표현 없음 / 확정 문구 위치 정상 / 리스크·이해관계 고지 존재 / 사실 출처 표기 / ` +
-    `브로커 조건 수치 미게재 / 가입 링크 IB 코드 정상 / 내부 링크 정상 / 수집 항목 4개`
+    `브로커 조건 수치 미게재 / 상품 정합성(CFD 표기·선물 심볼 없음) / ` +
+    `가입 링크 IB 코드 정상 / 내부 링크 정상 / 수집 항목 4개`
 );
