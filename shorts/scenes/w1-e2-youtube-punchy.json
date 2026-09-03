@@ -1,0 +1,173 @@
+{
+ "id": "W01-E02",
+ "channel": "youtube_shorts",
+ "style": "punchy",
+ "bpm": 120,
+ "title": "해외선물 수수료, 한 줄만 보면 안 되는 이유",
+ "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=shorts&utm_campaign=shortform_organic&utm_content=sf_002",
+ "source": "shorts-lineup.md 6절 2편. 확인되지 않은 브로커 수치 없이 비용 확인 항목만 제시",
+ "note": "정식 해외 브로커 정규 계좌 기준. 컷 길이는 전부 0.5초(120BPM 1박) 배수.",
+ "scenes": [
+  {
+   "dur": 1.5,
+   "kind": "hook",
+   "tone": "dark",
+   "headline": [
+    "수수료",
+    "한 줄만 봤다?"
+   ],
+   "headline_size": 132
+  },
+  {
+   "dur": 1.5,
+   "kind": "hook",
+   "tone": "red",
+   "headline": [
+    "총비용은",
+    "다를 수 있습니다"
+   ],
+   "headline_size": 116,
+   "emphasis": 0
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "먼저",
+    "이걸 보세요"
+   ],
+   "headline_size": 132
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "kicker": "확인 1",
+   "headline": [
+    "편도인가?"
+   ],
+   "headline_size": 158
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "왕복인가?"
+   ],
+   "headline_size": 158
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "red",
+   "headline": [
+    "기준이 다르면",
+    "비교도 틀립니다"
+   ],
+   "headline_size": 116,
+   "emphasis": 1
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "kicker": "확인 2",
+   "headline": [
+    "별도 항목은?"
+   ],
+   "headline_size": 144
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "보유 비용",
+    "환전 비용"
+   ],
+   "headline_size": 120,
+   "sub": [
+    "하루를 넘기면 스왑이 붙습니다"
+   ]
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "red",
+   "headline": [
+    "표시 밖 비용",
+    "빠뜨리지 마세요"
+   ],
+   "headline_size": 116,
+   "emphasis": 0
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "kicker": "확인 3",
+   "headline": [
+    "체결 과정은?"
+   ],
+   "headline_size": 144
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "스프레드",
+    "슬리피지"
+   ],
+   "headline_size": 140
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "같은 상품",
+    "같은 거래 수량"
+   ],
+   "headline_size": 124
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "같은 왕복 기준"
+   ],
+   "headline_size": 128,
+   "emphasis": 0
+  },
+  {
+   "dur": 2.5,
+   "kind": "cta",
+   "tone": "dark",
+   "headline": [
+    "내 조건으로",
+    "비용 계산받기"
+   ],
+   "headline_size": 104,
+   "sub": [
+    "프로필 링크에서 확인하세요"
+   ],
+   "emphasis": 1
+  },
+  {
+   "dur": 2.0,
+   "kind": "disclaimer",
+   "tone": "black",
+   "headline": [
+    "원금 손실 위험",
+    "수익 보장 아님",
+    "투자 책임 본인",
+    "IB 수수료 수취"
+   ],
+   "headline_size": 62
+  }
+ ]
+}

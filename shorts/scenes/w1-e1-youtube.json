@@ -1,0 +1,75 @@
+{
+  "id": "W01-E01",
+  "channel": "youtube_shorts",
+  "title": "개시증거금만 넣고 시작하면 안 되는 이유",
+  "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=youtube&utm_medium=shorts&utm_campaign=shortform_organic&utm_content=sf_001",
+  "source": "shorts-review.md S1 컷·자막 구성표 (6단계 검수 통과, 훅 A안)",
+  "scenes": [
+    {
+      "dur": 2.0,
+      "kind": "hook",
+      "kicker": "해외선물 입문",
+      "headline": ["증거금 채워도", "청산?"],
+      "headline_size": 118,
+      "emphasis": 1
+    },
+    {
+      "dur": 4.0,
+      "kind": "point",
+      "kicker": "이유는 간단합니다",
+      "headline": ["증거금은", "두 개입니다"],
+      "headline_size": 104
+    },
+    {
+      "dur": 5.0,
+      "kind": "point",
+      "kicker": "Initial",
+      "headline": ["개시 = 진입 조건"],
+      "headline_size": 96,
+      "sub": ["개시증거금은 들어갈 때 보는 돈입니다"]
+    },
+    {
+      "dur": 5.0,
+      "kind": "point",
+      "kicker": "Maintenance",
+      "headline": ["유지 = 보유 하한선"],
+      "headline_size": 92,
+      "sub": ["유지증거금은 들고 있을 때의 하한선입니다"]
+    },
+    {
+      "dur": 7.0,
+      "kind": "point",
+      "kicker": "여기서 갈립니다",
+      "headline": ["유지선 아래로 가면", "마진콜"],
+      "headline_size": 92,
+      "emphasis": 1,
+      "sub": ["개시만 딱 맞추면", "조금만 밀려도 유지선 아래입니다"]
+    },
+    {
+      "dur": 7.0,
+      "kind": "point",
+      "kicker": "핵심",
+      "headline": ["진입 가능", "≠", "버틸 수 있음"],
+      "headline_size": 100,
+      "sub": ["개시증거금은 시작이 허락되는 최소선입니다"]
+    },
+    {
+      "dur": 4.0,
+      "kind": "cta",
+      "headline": ["내 조건으로", "비용 계산받기"],
+      "headline_size": 92,
+      "sub": ["프로필 링크에서 확인하세요"]
+    },
+    {
+      "dur": 2.0,
+      "kind": "disclaimer",
+      "headline": [
+        "원금 손실 위험",
+        "수익 보장 아님",
+        "투자 책임 본인",
+        "IB 수수료 수취"
+      ],
+      "headline_size": 62
+    }
+  ]
+}

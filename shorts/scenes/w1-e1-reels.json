@@ -1,0 +1,13 @@
+{
+  "id": "W01-E01", "channel": "instagram_reels", "title": "증거금 채워도 청산되는 이유",
+  "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=reels&utm_campaign=shortform_organic&utm_content=sf_001",
+  "scenes": [
+    {"dur": 2.0, "kind": "hook", "kicker": "해외선물 입문", "headline": ["증거금 채워도", "청산?"], "headline_size": 118, "emphasis": 1},
+    {"dur": 4.0, "kind": "point", "kicker": "이유", "headline": ["증거금은", "두 개"], "headline_size": 108},
+    {"dur": 6.0, "kind": "point", "kicker": "역할이 다릅니다", "headline": ["개시 = 진입", "유지 = 보유 하한"], "headline_size": 82, "sub": ["들어갈 때와 들고 있을 때를 나눠 보세요"]},
+    {"dur": 6.0, "kind": "point", "kicker": "주의", "headline": ["유지선 아래", "→ 마진콜"], "headline_size": 96, "emphasis": 1, "sub": ["개시 금액만 맞추면 여유가 부족할 수 있습니다"]},
+    {"dur": 4.0, "kind": "point", "kicker": "핵심", "headline": ["진입 가능", "≠ 버틸 수 있음"], "headline_size": 90, "emphasis": 1},
+    {"dur": 4.0, "kind": "cta", "headline": ["내 조건으로", "비용 계산받기"], "headline_size": 92, "sub": ["프로필 링크에서 확인하세요"]},
+    {"dur": 2.0, "kind": "disclaimer", "headline": ["원금 손실 위험", "수익 보장 아님", "투자 책임 본인", "IB 수수료 수취"], "headline_size": 62}
+  ]
+}

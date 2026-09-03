@@ -8,3 +8,6 @@ node_modules/
 
 # 변환 산출물이다. 원본은 content/blog/*.md 이고 언제든 다시 만든다.
 dist/
+
+# 렌더 산출물이다. 원본은 shorts/scenes/*.json 이고 render.py 로 다시 만든다.
+shorts/out/

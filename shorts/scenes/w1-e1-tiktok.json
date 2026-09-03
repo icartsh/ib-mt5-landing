@@ -1,0 +1,13 @@
+{
+  "id": "W01-E01", "channel": "tiktok", "title": "증거금 넣었는데 왜 잘려?",
+  "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001",
+  "scenes": [
+    {"dur": 2.0, "kind": "hook", "kicker": "잠깐", "headline": ["증거금 넣었는데", "왜 잘려?"], "headline_size": 106, "emphasis": 1},
+    {"dur": 3.0, "kind": "point", "kicker": "헷갈린 포인트", "headline": ["증거금은", "하나가 아님"], "headline_size": 100},
+    {"dur": 6.0, "kind": "point", "kicker": "딱 두 개", "headline": ["개시 = 들어갈 때", "유지 = 들고 있을 때"], "headline_size": 76, "sub": ["역할부터 다릅니다"]},
+    {"dur": 6.0, "kind": "point", "kicker": "여기서 문제", "headline": ["유지선 아래", "→ 마진콜"], "headline_size": 96, "emphasis": 1, "sub": ["개시만 맞추면 여유가 부족할 수 있어요"]},
+    {"dur": 5.0, "kind": "point", "kicker": "한 줄 정리", "headline": ["들어갈 수 있음", "≠ 버틸 수 있음"], "headline_size": 82, "emphasis": 1},
+    {"dur": 4.0, "kind": "cta", "headline": ["내 조건 비용", "프로필에서 확인"], "headline_size": 88, "sub": ["링크에서 계산받기"]},
+    {"dur": 2.0, "kind": "disclaimer", "headline": ["원금 손실 위험", "수익 보장 아님", "투자 책임 본인", "IB 수수료 수취"], "headline_size": 62}
+  ]
+}

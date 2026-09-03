@@ -1,0 +1,146 @@
+{
+  "id": "W01-E01",
+  "channel": "tiktok",
+  "style": "punchy",
+  "bpm": 120,
+  "title": "증거금 채웠다 근데 청산됐다",
+  "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_001",
+  "note": "훅 재작성본. 컷 길이는 전부 0.5초(120BPM 1박) 배수.",
+  "scenes": [
+    {
+      "dur": 1.0,
+      "kind": "hook",
+      "tone": "dark",
+      "headline": [
+        "증거금 채웠다"
+      ],
+      "headline_size": 128
+    },
+    {
+      "dur": 1.5,
+      "kind": "hook",
+      "tone": "red",
+      "headline": [
+        "근데 청산됐다"
+      ],
+      "headline_size": 128
+    },
+    {
+      "dur": 1.5,
+      "kind": "hook",
+      "tone": "dark",
+      "headline": [
+        "왜?"
+      ],
+      "headline_size": 260
+    },
+    {
+      "dur": 1.5,
+      "kind": "point",
+      "tone": "blue",
+      "headline": [
+        "증거금이",
+        "두 개라서"
+      ],
+      "headline_size": 132
+    },
+    {
+      "dur": 2.0,
+      "kind": "point",
+      "tone": "dark",
+      "kicker": "개시",
+      "headline": [
+        "들어갈 때"
+      ],
+      "headline_size": 140
+    },
+    {
+      "dur": 2.0,
+      "kind": "point",
+      "tone": "dark",
+      "kicker": "유지",
+      "headline": [
+        "들고 있을 때"
+      ],
+      "headline_size": 128
+    },
+    {
+      "dur": 1.5,
+      "kind": "point",
+      "tone": "red",
+      "headline": [
+        "유지선 아래"
+      ],
+      "headline_size": 132
+    },
+    {
+      "dur": 1.5,
+      "kind": "point",
+      "tone": "red",
+      "headline": [
+        "마진콜"
+      ],
+      "headline_size": 200,
+      "emphasis": 0
+    },
+    {
+      "dur": 2.0,
+      "kind": "point",
+      "tone": "red",
+      "headline": [
+        "개시만 맞추면",
+        "조금만 밀려도 끝"
+      ],
+      "headline_size": 110,
+      "emphasis": 1
+    },
+    {
+      "dur": 2.0,
+      "kind": "point",
+      "tone": "dark",
+      "headline": [
+        "들어갈 수 있는 돈"
+      ],
+      "headline_size": 112
+    },
+    {
+      "dur": 2.5,
+      "kind": "point",
+      "tone": "blue",
+      "headline": [
+        "버틸 수 있는 돈"
+      ],
+      "headline_size": 112,
+      "emphasis": 0,
+      "sub": [
+        "같은 숫자가 아닙니다"
+      ]
+    },
+    {
+      "dur": 2.0,
+      "kind": "cta",
+      "tone": "dark",
+      "headline": [
+        "내 조건으로",
+        "비용 계산받기"
+      ],
+      "headline_size": 104,
+      "sub": [
+        "프로필 링크에서 확인하세요"
+      ],
+      "emphasis": 1
+    },
+    {
+      "dur": 2.0,
+      "kind": "disclaimer",
+      "tone": "black",
+      "headline": [
+        "원금 손실 위험",
+        "수익 보장 아님",
+        "투자 책임 본인",
+        "IB 수수료 수취"
+      ],
+      "headline_size": 62
+    }
+  ]
+}

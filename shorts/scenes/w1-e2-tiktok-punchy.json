@@ -1,0 +1,157 @@
+{
+ "id": "W01-E02",
+ "channel": "tiktok",
+ "style": "punchy",
+ "bpm": 120,
+ "title": "수수료만 봤어? 이것도 비용이야",
+ "cta_url": "https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=short_video&utm_campaign=shortform_organic&utm_content=sf_002",
+ "note": "정식 해외 브로커 정규 계좌 기준. 말자막형 훅 재작성본. 컷 길이는 전부 0.5초 배수.",
+ "scenes": [
+  {
+   "dur": 1.0,
+   "kind": "hook",
+   "tone": "dark",
+   "headline": [
+    "수수료만 봤어?"
+   ],
+   "headline_size": 146
+  },
+  {
+   "dur": 1.5,
+   "kind": "hook",
+   "tone": "red",
+   "headline": [
+    "이것도 비용이야"
+   ],
+   "headline_size": 142,
+   "emphasis": 0
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "첫째"
+   ],
+   "headline_size": 220
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "편도냐"
+   ],
+   "headline_size": 190
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "왕복이냐"
+   ],
+   "headline_size": 180
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "red",
+   "headline": [
+    "기준 다르면",
+    "비교 끝"
+   ],
+   "headline_size": 140,
+   "emphasis": 1
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "둘째"
+   ],
+   "headline_size": 220
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "보유 비용",
+    "환전 비용"
+   ],
+   "headline_size": 120,
+   "sub": [
+    "하루를 넘기면 스왑이 붙습니다"
+   ]
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "red",
+   "headline": [
+    "별도인지",
+    "꼭 확인"
+   ],
+   "headline_size": 146,
+   "emphasis": 0
+  },
+  {
+   "dur": 1.5,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "셋째"
+   ],
+   "headline_size": 220
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "dark",
+   "headline": [
+    "스프레드",
+    "슬리피지"
+   ],
+   "headline_size": 140
+  },
+  {
+   "dur": 2.0,
+   "kind": "point",
+   "tone": "blue",
+   "headline": [
+    "같은 조건으로",
+    "총비용 확인"
+   ],
+   "headline_size": 126,
+   "emphasis": 1
+  },
+  {
+   "dur": 2.0,
+   "kind": "cta",
+   "tone": "dark",
+   "headline": [
+    "내 조건으로",
+    "비용 계산받기"
+   ],
+   "headline_size": 104,
+   "sub": [
+    "프로필 링크에서 확인하세요"
+   ],
+   "emphasis": 1
+  },
+  {
+   "dur": 2.0,
+   "kind": "disclaimer",
+   "tone": "black",
+   "headline": [
+    "원금 손실 위험",
+    "수익 보장 아님",
+    "투자 책임 본인",
+    "IB 수수료 수취"
+   ],
+   "headline_size": 62
+  }
+ ]
+}
