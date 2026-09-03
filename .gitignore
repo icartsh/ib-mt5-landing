@@ -5,3 +5,6 @@ data/
 node_modules/
 .DS_Store
 *.log
+
+# 변환 산출물이다. 원본은 content/blog/*.md 이고 언제든 다시 만든다.
+dist/
