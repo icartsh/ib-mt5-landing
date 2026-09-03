@@ -78,7 +78,7 @@ const RISK_LINES = [
   "IB(소개영업자)로서 거래 수수료의 일부를 지급받습니다",
 ];
 
-const CTA_TEXT = "내 조건으로 비용 계산받기";
+const CTA_TEXT_BY_CAMPAIGN = new Map([["seed_w1_cost", "내 조건으로 비용 계산받기"], ["seed_w2_onboarding", "1:1 세팅 지원 신청"]]);
 
 /* ---------- 4. UTM 규격 (standards §3) ---------- */
 
@@ -106,10 +106,32 @@ for (const f of files) {
   /* 배치 순서: 본문 → 리스크 고지 → CTA (standards §1).
      고지가 CTA 아래로 내려가면 스크롤에서 잘려 안 읽힌다. IB-6 2장이 순서를 못박은 이유다. */
   const riskAt = t.indexOf("⚠️ 투자 위험 고지");
-  const ctaAt = t.lastIndexOf(CTA_TEXT);
+  const campaign = [...t.matchAll(/utm_campaign=([^&\s)\]]+)/g)].at(-1)?.[1];
+  const ctaText = CTA_TEXT_BY_CAMPAIGN.get(campaign) ?? "내 조건으로 비용 계산받기";
+  const ctaAt = t.lastIndexOf(ctaText);
   if (riskAt < 0) fail(`[리스크고지] ${f}: "⚠️ 투자 위험 고지" 블록 제목이 없다.`);
-  else if (ctaAt < 0) fail(`[CTA] ${f}: CTA 문구가 없다 — "${CTA_TEXT}"`);
+  else if (ctaAt < 0) fail(`[CTA] ${f}: CTA 문구가 없다 — "${ctaText}"`);
   else if (ctaAt < riskAt) fail(`[배치] ${f}: CTA 가 리스크 고지보다 위에 있다. 순서는 본문 → 고지 → CTA (IB-6 2장).`);
+
+  /* 붙여넣기 사고 방지. 아래 셋은 기계 검사를 통과하면서도 발행하면 독자 눈에 그대로 보인다.
+     B5 가 세 가지를 다 달고 PASS 로 올라온 적이 있다(2026-09-03). */
+  t.split("\n").forEach((line, i) => {
+    const n = i + 1;
+
+    /* diff 조각. 편집 중 붙여넣기로 들어오고, 네이버 본문에 "+" 한 글자로 남는다. */
+    if (/^[+-]\s*$/.test(line)) fail(`[붙여넣기] ${f}:${n}: diff 조각 "${line.trim()}" 이 본문에 남았다.`);
+
+    /* 인용 블록 이어쓰기 실패. "> " 가 빠진 다음 줄은 인용에서 튀어나와 본문처럼 보인다.
+       메타 설명이 이렇게 새면 검색 노출문이 통째로 어긋난다. */
+    if (/^\s+\S/.test(line) && /^>/.test(t.split("\n")[i - 1] ?? "")) {
+      fail(`[인용] ${f}:${n}: 앞 줄이 "> " 인용인데 이 줄에 "> " 가 없다 — 인용 블록이 끊긴다.`);
+    }
+
+    /* 링크 없는 우리 경로. 네이버 본문에서 "/broker" 는 클릭도 안 되고 뜻도 통하지 않는다.
+       죽은 링크와 같은 종류의 사고이고, 화면상 멀쩡해 보인다는 점까지 같다. */
+    const bareRoute = line.replace(/https?:\/\/\S+/g, "").match(/(?<![\w/])\/(broker|signup|apply)\b/);
+    if (bareRoute) fail(`[경로] ${f}:${n}: "${bareRoute[0]}" 를 주소 없이 썼다 — 전체 URL 로 바꾼다.`);
+  });
 
   /* 숫자를 쓰면 출처와 기준일을 붙인다 (IB-6 체크리스트 5). 기준일 없는 숫자는
      시간이 지나면 그냥 틀린 정보가 된다 — 세율·공제는 개정되는 값이다. */
