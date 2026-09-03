@@ -19,6 +19,8 @@
     "content-guard": "node scripts/content-guard.mjs",
     "blog-html": "node scripts/blog-to-html.mjs",
     "blog-thumb": "python3 scripts/blog-thumb.py",
+    "profile-image": "python3 scripts/profile-image.py",
+    "preview": "node scripts/blog-to-html.mjs && python3 scripts/blog-thumb.py && node scripts/preview.mjs",
     "test": "node scripts/copy-guard.mjs && node scripts/content-guard.mjs && node scripts/blog-to-html.mjs && node scripts/smoke-serverless.mjs && node scripts/smoke-telegram.mjs && node scripts/smoke-telegram-doctor.mjs && node scripts/ship-guard.mjs",
     "ship-guard": "node scripts/ship-guard.mjs",
     "ship": "npm test && node scripts/ship-guard.mjs --strict"

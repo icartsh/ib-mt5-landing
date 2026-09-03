@@ -35,6 +35,9 @@ const OUT = "dist/blog-html";
 
 /* ── 인라인 서식 ─────────────────────────────────────────────── */
 
+/** 코드블록 울타리. ``` 와 ~~~ 를 같은 것으로 본다. */
+const isFence = (t) => t.startsWith("```") || t.startsWith("~~~");
+
 const esc = (s) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -89,11 +92,15 @@ function convert(md) {
       continue;
     }
 
-    /* 코드 블록 — 안쪽은 서식을 먹이지 않는다 */
-    if (t.startsWith("```")) {
+    /* 코드 블록 — 안쪽은 서식을 먹이지 않는다.
+       울타리는 ``` 와 ~~~ 둘 다 받는다. 원고를 쓰는 사람이 매번 같은 기호를
+       고르리라고 기대하면 안 된다. 한쪽만 알아보면 다른 쪽은 통째로 문단이 되어
+       울타리 기호가 독자 화면에 글자로 찍힌다 — 붙여넣어도 화면은 안 깨지므로
+       발행 버튼을 누른 뒤에야 보인다. */
+    if (isFence(t)) {
       const buf = [];
       i += 1;
-      while (i < lines.length && !lines[i].trim().startsWith("```")) {
+      while (i < lines.length && !isFence(lines[i].trim())) {
         buf.push(lines[i]);
         i += 1;
       }
@@ -200,7 +207,7 @@ function convert(md) {
       if (
         n === "---" ||
         n.startsWith(">") ||
-        n.startsWith("```") ||
+        isFence(n) ||
         n.startsWith("|") ||
         /^#{1,3}\s/.test(n)
       )
@@ -245,6 +252,7 @@ const LEAKS = [
   [/\*\*/, "굵게 기호(**)가 글자로 남았다"],
   [/(^|\s)\|.*\|(\s|$)/m, "표 파이프(|)가 글자로 남았다"],
   [/\[[^\]]+\]\(https?:/, "링크 문법이 글자로 남았다"],
+  [/^\s*(```|~~~)/m, "코드블록 울타리(``` 또는 ~~~)가 글자로 남았다"],
 ];
 
 /* ── 실행 ─────────────────────────────────────────────────────── */

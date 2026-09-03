@@ -6,6 +6,8 @@
 
 한 회차는 15~30분이다. 몰아서 하지 않는 것이 이 계획의 핵심이다(이유는 1절).
 
+> **이 문서는 계정이 있다는 전제로 쓰였다.** 2026-09-03 기준 다섯 채널 계정이 아직 없다. 계정 개설은 `docs/account-setup.md` 에 있고, 그쪽을 먼저 끝내야 이 문서의 링크들이 도착한다.
+
 ---
 
 ## 0. 한 번만 하는 확인 (2분)
@@ -218,7 +220,7 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 |---|---|---|
 | YouTube Shorts | 설명란 · 고정 댓글 | 클릭됨 |
 | Instagram Reels | **프로필 bio 링크만** | 클릭 안 됨 |
-| TikTok | **프로필 bio 링크만** (팔로워 1,000 미만 기준) | 클릭 안 됨 |
+| TikTok | **프로필 bio 링크만** (비즈니스 계정이어야 생긴다 — 아래) | 클릭 안 됨 |
 | Threads | 본문 | 클릭됨 |
 
 그래서 Reels·TikTok 캡션에는 `프로필 링크` 라고 적고, **프로필 bio 에는 아래 주소를 한 번만 넣어 두면 된다** (상시 링크, 매번 바꾸지 않는다).
@@ -227,6 +229,8 @@ curl -s https://ib-mt5-landing.vercel.app/api/health
 Instagram bio : https://ib-mt5-landing.vercel.app/?utm_source=instagram&utm_medium=bio&utm_campaign=always_on&utm_content=bio
 TikTok  bio   : https://ib-mt5-landing.vercel.app/?utm_source=tiktok&utm_medium=bio&utm_campaign=always_on&utm_content=bio
 ```
+
+> **TikTok bio 링크는 개인 계정에 아예 칸이 없다.** 팔로워 1,000명이 넘어야 생기는데 우리는 0명에서 시작한다. **비즈니스 계정으로 전환**하면 팔로워 수와 무관하게 바로 생기고, 그 칸은 **모바일 앱에만** 있다(PC 웹에서는 보이지 않는다). 절차는 `docs/account-setup.md` 5절에 있다.
 
 > bio 링크는 하나뿐이라 **어느 영상이 데려온 유입인지 링크로는 갈리지 않는다.** 대신 아래 발행 기록표에 올린 날짜를 적어 두면 유입이 뛴 날로 대조할 수 있다. 이걸 링크로 나누려면 편당 짧은 주소를 따로 만들어 bio 를 매번 바꿔야 하는데, 손이 많이 가고 잊기 쉬워서 지금 단계에는 권하지 않는다.
 
