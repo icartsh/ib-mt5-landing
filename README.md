@@ -117,6 +117,17 @@ npm run smoke                          # 터미널 3 → data/notifications.log 
 > 그 고객을 골라 **신청자의 이름과 전체 전화번호가 낯선 사람에게 갈 수 있다.**
 > 켜는 순서와 고장 진단은 `docs/telegram-inquiry.md`.
 
+## 고친 것이 라이브까지 갔는지 확인
+
+```bash
+npm run ship   # npm test + 배송 가드(strict) — "다 됐습니다" 를 주장하기 전에 돌린다
+```
+
+`npm test` 통과는 **파일이 맞다**는 뜻이지 **사람에게 닿았다**는 뜻이 아니다. Vercel 은
+`origin/main` 을 보고 배포하므로, 커밋만 하고 푸시하지 않으면 라이브는 옛 화면 그대로다.
+그 상태에서는 `npm test` 도, `git status` 도, 로컬 브라우저도 전부 정상으로 보인다.
+`scripts/ship-guard.mjs` 가 그 간격만 본다. 자세한 배경은 `AGENTS.md` 3-1 절.
+
 ## Vercel 배포
 
 리포를 Vercel에 연결하면 `vercel.json` 대로 `public/` 이 정적으로, `api/lead.js` 가

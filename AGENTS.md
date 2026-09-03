@@ -45,6 +45,29 @@ npm test   # copy-guard + 리드 접수 경로 + 문의 중계
 **검사를 우회하지 말고 검사를 고친다.** 여기 걸리는 것들은 대부분 화면에서는 멀쩡해 보이고
 사고가 난 뒤에야 드러나는 종류다.
 
+## 3-1. "다 됐습니다" 라고 보고하기 전에 돌릴 것
+
+```bash
+npm run ship   # npm test + 배송 가드(strict)
+```
+
+`npm test` 가 통과해도 그 변경이 **사람에게 닿았다는 뜻이 아니다.** 이 저장소에서 같은 사고가
+세 번 났고, 세 번 다 파일에는 이상이 없었다.
+
+1. 완성본이 작업 폴더에만 있고 커밋되지 않음
+2. 커밋은 됐는데 `origin/main` 에 안 올라감 → Vercel 은 origin 을 보고 배포하므로 라이브가 옛것
+3. 그 상태로 "고쳤습니다" 라고 보고함
+
+2번이 가장 나쁘다. `npm test` 통과, `git status` 깨끗, 로컬에서 열면 고쳐져 있다 —
+**로컬에서 볼 수 있는 신호가 전부 정상이다.** 실제로 `/signup` 이 MIM 에 존재하지 않는
+심볼(`US100`·`GER40`)을 11커밋 동안 라이브로 띄웠다. 잡은 것은 프로덕션 HTML 을 직접
+받아 본 것뿐이었다.
+
+`ship-guard` 가 이걸 본다. 배송면(`public`·`api`·`server`·`vercel.json`·`package.json`)에
+미푸시 커밋이 있으면 `npm test` 단계에서 이미 막고, `--strict`(=`npm run ship`)는 미커밋까지
+막는다. 미커밋 검사를 기본에서 뺀 이유는 개발 중 작업 폴더가 당연히 더럽기 때문이다 —
+**늘 빨간불인 가드는 꺼진다.** 원고·문서처럼 배송면 밖은 실패로 치지 않는다.
+
 ## 4. 배포
 
 `main` 에 push 하면 GitHub Actions 가 `npm test` 를 돌리고 GitHub Pages 프리뷰를 올린다.
@@ -54,4 +77,11 @@ npm test   # copy-guard + 리드 접수 경로 + 문의 중계
 ```bash
 npm run telegram -- doctor    # 텔레그램 설정이 어디까지 됐는지 한 번에 본다
 curl -s https://ib-mt5-landing.vercel.app/api/health
+```
+
+**라이브가 무엇을 띄우고 있는지는 라이브에 물어서 확인한다.** 로컬 파일을 다시 읽는 것은
+확인이 아니다 — 위 3-1 의 2번 사고에서 로컬은 끝까지 정상이었다.
+
+```bash
+curl -s https://ib-mt5-landing.vercel.app/signup | grep -c 'US100\|GER40'   # 0 이어야 한다
 ```
