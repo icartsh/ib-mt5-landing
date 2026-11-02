@@ -17,7 +17,6 @@
  * 지금 어디로 가고 있는지와 최근 배달 오류를 같이 보여주는 이유다.
  */
 import { readFileSync } from "node:fs";
-import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import { config, ROOT, resolveInquiryBot } from "../server/config.mjs";
 
@@ -220,8 +219,13 @@ async function doctor() {
     console.log("   ✗ 없음 — /api/telegram 이 503 으로 닫혀 있어 문의가 전달되지 않는다.");
     console.log("     (확인 없이 열면 누구나 가짜 문의 카드를 만들어 넣을 수 있고, 거기 답장하면");
     console.log("      답변이 그 사람에게 간다. 그래서 값이 없으면 아예 열지 않는다.)");
-    console.log(`     쓸 수 있는 값: TELEGRAM_WEBHOOK_SECRET=${randomBytes(24).toString("hex")}`);
-    remaining.push("위 TELEGRAM_WEBHOOK_SECRET 값을 환경변수와 로컬 .env 에 같이 넣는다.");
+    /* 값을 여기서 만들어 출력하지 않는다. 이 명령은 에이전트가 돌리는 일이 많고,
+       stdout 은 세션 트랜스크립트에 그대로 박제된다 — 출력한 순간 그 값은 평문으로
+       남은 자격증명이 되고, 사장님이 붙여넣었다면 회수 대상이 된다. 그래서 값을 주는
+       대신 만드는 방법만 알려 준다. (근거: IB-44 스캔) */
+    console.log("     만드는 법: openssl rand -hex 24  ← 사장님 터미널에서 직접 돌린다.");
+    console.log("     나온 값을 TELEGRAM_WEBHOOK_SECRET 으로 넣는다. 여기 붙여넣지 않는다.");
+    remaining.push("openssl rand -hex 24 로 만든 값을 TELEGRAM_WEBHOOK_SECRET 환경변수와 로컬 .env 에 같이 넣는다.");
   }
 
   /* --- 5. webhook 등록 + 사장님이 문의 봇에 START 했는가 -------------- */
